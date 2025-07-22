@@ -1,0 +1,315 @@
+# Global namespace used for all charts
+namespace: helm-app
+
+alb:
+    fullnameOverride: alb-nginx
+    replicaCount: 1
+    backendHostTpl: frontend.helm-app
+    image:
+      repository: nginx
+      tag: latest
+    configMapName: alb-nginx-html
+    tlsSecretName: alb-nginx-tls
+    service:
+      type: NodePort
+      http:
+        enabled: false
+        port: 80
+        targetPort: 80
+        nodePort: 30100
+      https:
+        port: 443
+        targetPort: 443
+        nodePort: 31443
+
+frontend:
+  fullnameOverride: frontend
+  replicaCount: 1
+  image:
+    repository: nginx
+    tag: latest
+    imagePullPolicy: Always
+  containerPort: 80
+  configMapName: frontend-html-config
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+
+apiGateway:
+  fullnameOverride: api-gateway
+  replicaCount: 1
+  image:
+    repository: api-gateway
+    tag: latest
+    pullPolicy: Never
+  containerPort: 8081
+  service:
+    type: NodePort
+    port: 8081
+    targetPort: 8081
+    nodePort: 30081
+  resources:
+    requests:
+      cpu: "40m"
+    limits:
+      cpu: "200m"
+
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 15
+
+lambdaProducer:
+  fullnameOverride: lambda-producer
+  replicaCount: 1
+  image:
+    repository: lambda-producer
+    tag: latest
+    pullPolicy: Never
+  containerPort: 4000
+  service:
+    type: ClusterIP
+    port: 4000
+    targetPort: 4000
+
+rabbitmq:
+  image:
+    repository: rabbitmq
+    tag: "3-management"
+  replicaCount: 1
+
+  credentials:
+    username: myuser
+    password: mypass
+
+  ports:
+    amqp: 5672
+    management: 15672
+
+  pvc:
+    name: rabbitmq-pvc
+    accessMode: ReadWriteOnce
+    storage: 1Gi
+
+  secretName: rabbitmq-secret   
+
+lambdaConsumer:
+  fullnameOverride: lambda-consumer
+  replicaCount: 1
+  image:
+    repository: lambda-consumer
+    tag: latest
+    pullPolicy: Never
+  containerPort: 4001
+  service:
+    type: ClusterIP
+    port: 4001
+    targetPort: 4001
+  rabbitmqUrl: amqp://myuser:mypass@rabbitmq.helm-app.svc.cluster.local:5672
+
+backendService:
+  enabled: true
+  fullnameOverride: backend
+  replicaCount: 1
+
+  image:
+    repository: backend
+    tag: latest
+    pullPolicy: Never
+  containerPort: 3000
+
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+
+  # databaseUrl: postgres://myuser:mypass@postgres.helm-app.svc.cluster.local:5432/mydb
+
+  redis:
+    host: redis.helm-app.svc.cluster.local
+    port: 6379
+    wait:
+      enabled: true
+      interval: 2
+      timeout: 60
+
+  postgres:
+    host: postgres.helm-app.svc.cluster.local
+    port: 5432
+    wait:
+      enabled: true
+      interval: 2
+      timeout: 60
+
+
+redis:
+  fullnameOverride: redis
+  replicaCount: 1
+  image:
+    repository: redis
+    tag: latest
+    pullPolicy: IfNotPresent
+  containerPort: 6379
+  service:
+    type: ClusterIP
+    port: 6379
+    targetPort: 6379
+
+postgres:
+  fullnameOverride: postgres
+  replicaCount: 1
+
+  image:
+    repository: postgres
+    tag: 15-alpine
+    pullPolicy: IfNotPresent
+
+  containerPort: 5432
+
+  service:
+    type: ClusterIP
+    port: 5432
+    targetPort: 5432
+
+  auth:
+    user: myuser
+    password: mypass
+    database: mydb
+
+  initdbScripts:
+    init.sql: |
+      CREATE TABLE IF NOT EXISTS test_table (
+        id SERIAL PRIMARY KEY,
+        message TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+prometheus:
+  fullnameOverride: prometheus
+  replicaCount: 1
+
+  image:
+    repository: prom/prometheus
+    tag: v2.52.0
+    pullPolicy: IfNotPresent
+
+  containerPort: 9090
+
+  config:
+    configMapName: prometheus-config
+    rulesConfigMap: alert-rules
+
+  serviceAccount:
+    create: true
+    name: prometheus
+
+  rbac:
+    enabled: true
+    clusterRoleName: prometheus-cluster-role
+    clusterRoleBindingName: prometheus-cluster-rolebinding
+    createClusterRole: true
+
+  service:
+    type: NodePort
+    port: 9090
+    targetPort: 9090
+    nodePort: 30900
+
+  storage:
+    type: emptyDir
+
+alertRules:
+  configMapName: alert-rules
+  fileName: alert-rules.yaml
+  rules:
+    groups:
+      - name: k8s-alerts
+        rules:
+          - alert: HighCPUUsage
+            expr: rate(process_cpu_seconds_total{job="api-gateway"}[1m]) > 0.0001
+            for: 30s
+            labels:
+              severity: warning
+            annotations:
+              summary: "High CPU usage detected on API Gateway"
+              description: "App-level CPU usage is above threshold on {{ $labels.instance }}."
+
+          - alert: TooManyReplicas
+            expr: count(up{job="api-gateway"}) > 2
+            labels:
+              severity: warning
+            annotations:
+              summary: "Too many API Gateway pods running"
+              description: "More than 3 API Gateway pods are currently up."
+
+          - alert: TooManyRequests
+            expr: rate(api_gateway_429_total[30s]) > 1
+            for: 30s
+            labels:
+              severity: critical
+            annotations:
+              summary: "Too many requests resulting in HTTP 429"
+              description: "Rate of HTTP 429 responses is above threshold."
+
+alertmanager:
+  replicaCount: 1
+
+  image:
+    repository: prom/alertmanager
+    tag: v0.27.0
+    pullPolicy: IfNotPresent
+
+  containerPort: 9093
+
+  service:
+    type: ClusterIP
+    port: 9093
+    targetPort: 9093
+
+  configMapName: alertmanager-config
+
+  smtp:
+    smarthost: sandbox.smtp.mailtrap.io:2525
+    from: alert@carrillo.com
+    username: b7f52a0bab2c77
+    password: 0908ef63ffbf1a
+    requireTLS: true
+
+  route:
+    receiver: email-alerts
+    group_by:
+      - alertname
+    group_wait: 1m
+    group_interval: 3m
+    repeat_interval: 5m
+
+  receiver:
+    name: email-alerts
+    email:
+      to: johnchristopher.carrillo@gmail.com
+
+grafana:
+  replicaCount: 1
+
+  image:
+    repository: grafana/grafana
+    tag: latest
+
+  service:
+    type: NodePort       # Can be ClusterIP, NodePort, or LoadBalancer
+    port: 3000
+    targetPort: 3000
+    nodePort: 32000
+
+  configMap:
+    datasources: grafana-datasources
+    dashboards: grafana-api-dashboard-config        # Contains dashboards.yaml for provisioning
+    definitions: api-gateway-dashboard           # Contains the JSON dashboard definition
+
+  # Optional: if using dashboard provisioner
+  dashboards:
+    refreshInterval: "10s"
+    defaultTimezone: browser
+    schemaVersion: 36

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+spec:
+  selector:
+    app: frontend
+  type: {{ .Values.frontend.service.type | default "ClusterIP" }}
+  ports:
+    - protocol: TCP
+      port: {{ .Values.frontend.service.port | default 80 }}
+      targetPort: {{ .Values.frontend.service.targetPort | default 80 }}
+      {{- if or (eq .Values.frontend.service.type "NodePort") (eq .Values.frontend.service.type "LoadBalancer") }}
+      nodePort: {{ .Values.frontend.service.nodePort | default 30080 }}
+      {{- end }}

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "api-gateway.fullname" . }}
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+  labels:
+    app: {{ include "api-gateway.fullname" . }}
+spec:
+  replicas: {{ .Values.apiGateway.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "api-gateway.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "api-gateway.fullname" . }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ .Values.apiGateway.image.repository }}:{{ .Values.apiGateway.image.tag }}
+          imagePullPolicy: {{ .Values.apiGateway.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.apiGateway.containerPort }}
+          resources:
+            requests:
+              cpu: {{ .Values.apiGateway.resources.requests.cpu }}
+            limits:
+              cpu: {{ .Values.apiGateway.resources.limits.cpu }}

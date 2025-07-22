@@ -1,0 +1,26 @@
+{
+  "id": null,
+  "title": "Too Many Requests (429)",
+  "tags": ["auto", "api-gateway"],
+  "timezone": "browser",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "title": "Too Many Requests (429)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 15, "w": 24, "h": 5 },
+      "targets": [
+        {
+          "expr": "rate(api_gateway_429_total[1m])",
+          "legendFormat": "429 Errors"
+        }
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus" 
+      }
+    }
+  ]
+}

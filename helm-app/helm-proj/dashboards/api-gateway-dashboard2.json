@@ -1,0 +1,26 @@
+{
+  "id": null,
+  "title": "Replica Count",
+  "tags": ["auto", "api-gateway"],
+  "timezone": "browser",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "title": "Replica Count",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 9, "w": 24, "h": 5 },
+      "targets": [
+        {
+          "expr": "count(up{job=\"api-gateway\"})",
+          "legendFormat": "Pod Count"
+        }
+      ],
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      }
+    }
+  ]
+}

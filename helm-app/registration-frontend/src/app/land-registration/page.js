@@ -45,22 +45,22 @@ export default function LandRegistration() {
 
       <Typography variant="h6" mt={2}>👤 Owner Information</Typography>
 
-      <TextField label="Owner Name" name="owner_name" fullWidth margin="normal" value={formData.owner_name} onChange={handleChange} />
-      <TextField label="Contact Info" name="contact_info" fullWidth margin="normal" value={formData.contact_info} onChange={handleChange} />
-      <TextField label="Address" name="address" fullWidth margin="normal" value={formData.address} onChange={handleChange} />
+      <TextField required label="Owner Name" name="owner_name" fullWidth margin="normal" value={formData.owner_name} onChange={handleChange} />
+      <TextField required label="Contact Info" name="contact_info" fullWidth margin="normal" value={formData.contact_info} onChange={handleChange} />
+      <TextField required label="Address" name="address" fullWidth margin="normal" value={formData.address} onChange={handleChange} />
 
       <Typography variant="h6" mt={4}>📄 Land Title Information</Typography>
 
-      <TextField label="Title Number" name="title_number" fullWidth margin="normal" value={formData.title_number} onChange={handleChange} />
-      <TextField label="Property Location" name="property_location" fullWidth margin="normal" value={formData.property_location} onChange={handleChange} />
-      <TextField label="Lot Number" name="lot_number" fullWidth margin="normal" value={formData.lot_number} onChange={handleChange} />
-      <TextField label="Survey Number" name="survey_number" fullWidth margin="normal" value={formData.survey_number} onChange={handleChange} />
-      <TextField label="Area Size (sqm)" name="area_size" fullWidth margin="normal" value={formData.area_size} onChange={handleChange} />
-      <TextField label="Classification" name="classification" fullWidth margin="normal" value={formData.classification} onChange={handleChange} />
-      <TextField type="date" name="registration_date" fullWidth margin="normal" value={formData.registration_date} onChange={handleChange} InputLabelProps={{ shrink: true }} label="Registration Date" />
-      <TextField label="Registrar Office" name="registrar_office" fullWidth margin="normal" value={formData.registrar_office} onChange={handleChange} />
-      <TextField label="Previous Title Number" name="previous_title_number" fullWidth margin="normal" value={formData.previous_title_number} onChange={handleChange} />
-      <TextField label="Encumbrances" name="encumbrances" fullWidth margin="normal" value={formData.encumbrances} onChange={handleChange} />
+      <TextField required label="Title Number" name="title_number" fullWidth margin="normal" value={formData.title_number} onChange={handleChange} />
+      <TextField required label="Property Location" name="property_location" fullWidth margin="normal" value={formData.property_location} onChange={handleChange} />
+      <TextField required label="Lot Number" name="lot_number" fullWidth margin="normal" value={formData.lot_number} onChange={handleChange} />
+      <TextField required label="Survey Number" name="survey_number" fullWidth margin="normal" value={formData.survey_number} onChange={handleChange} />
+      <TextField required label="Area Size (sqm)" name="area_size" fullWidth margin="normal" value={formData.area_size} onChange={handleChange} />
+      <TextField required label="Classification" name="classification" fullWidth margin="normal" value={formData.classification} onChange={handleChange} />
+      <TextField required type="date" name="registration_date" fullWidth margin="normal" value={formData.registration_date} onChange={handleChange} InputLabelProps={{ shrink: true }} label="Registration Date" />
+      <TextField required label="Registrar Office" name="registrar_office" fullWidth margin="normal" value={formData.registrar_office} onChange={handleChange} />
+      <TextField requiredlabel="Previous Title Number" name="previous_title_number" fullWidth margin="normal" value={formData.previous_title_number} onChange={handleChange} />
+      <TextField required label="Encumbrances" name="encumbrances" fullWidth margin="normal" value={formData.encumbrances} onChange={handleChange} />
 
       <TextField
         select

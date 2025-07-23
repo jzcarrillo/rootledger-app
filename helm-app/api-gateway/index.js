@@ -6,7 +6,7 @@ const os = require('os');
 
 const app = express();
 const PORT = 8081;
-const FRONTEND = 'http://localhost:80';
+const FRONTEND = 'http://localhost:4005';
 
 // === Metrics ===
 const register = new client.Registry();

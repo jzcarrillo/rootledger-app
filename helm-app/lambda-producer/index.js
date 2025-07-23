@@ -55,7 +55,7 @@ connectRabbitMQ();
  * POST /submit
  * Queues entire request body to RabbitMQ
  */
-app.post('/submit', async (req, res) => {
+app.post('/register', async (req, res) => {
   const data = req.body;
 
   if (!data || Object.keys(data).length === 0) {

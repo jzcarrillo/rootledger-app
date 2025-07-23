@@ -58,11 +58,11 @@ const submitLimiter = rateLimit({
 });
 
 // === POST /submit forwarding to lambda-producer-service
-app.post('/submit', submitLimiter, async (req, res) => {
-  console.log(`[LOG] Incoming POST request to /submit from ${os.hostname()}`);
+app.post('/land/register', submitLimiter, async (req, res) => {
+  console.log(`[LOG] Incoming POST request to /land/register from ${os.hostname()}`);
   try {
     const response = await axios.post(
-      'http://lambda-producer:4000/submit', // ✅ fixed endpoint
+      'http://lambda-producer:4000/register', // ✅ fixed endpoint
       req.body,
       {
         headers: {
@@ -71,6 +71,7 @@ app.post('/submit', submitLimiter, async (req, res) => {
         timeout: 5000,
       }
     );
+
 
     console.log(`[✅ SUCCESS] Forwarded to lambda-producer-service: ${response.status}`);
     res.status(response.status).json(response.data);

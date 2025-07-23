@@ -42,7 +42,7 @@ apiGateway:
   image:
     repository: api-gateway
     tag: latest
-    pullPolicy: Never
+    pullPolicy: IfNotPresent
   containerPort: 8081
   service:
     type: NodePort

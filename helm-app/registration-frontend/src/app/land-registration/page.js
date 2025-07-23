@@ -28,7 +28,7 @@ export default function LandRegistration() {
 
   const handleSubmit = async () => {
     try {
-      const response = await axios.post('http://your-api-gateway/land/register', formData);
+      const response = await axios.post('http://localhost:30081/land/register', formData);
       console.log('✅ Registered:', response.data);
       alert('✅ Land Registration Successful!');
     } catch (err) {
@@ -73,6 +73,7 @@ export default function LandRegistration() {
       >
         <MenuItem value="Active">Active</MenuItem>
         <MenuItem value="Cancelled">Cancelled</MenuItem>
+        <MenuItem value="Pending">Pending</MenuItem>
         <MenuItem value="Under Investigation">Under Investigation</MenuItem>
       </TextField>
 

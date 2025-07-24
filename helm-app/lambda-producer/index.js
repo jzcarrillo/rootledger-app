@@ -2,6 +2,10 @@ const express = require('express');
 const amqp = require('amqplib');
 const cors = require('cors');
 
+const multer = require('multer');
+const storage = multer.memoryStorage(); // store files in memory (you can stream to S3, etc.)
+const upload = multer({ storage });
+
 const app = express();
 
 // ✅ CORS setup
@@ -56,16 +60,22 @@ connectRabbitMQ();
  * POST /submit
  * Queues entire request body to RabbitMQ
  */
-app.post('/register', async (req, res) => {
-  const data = req.body;
+// ⚠️ Important: use `.fields()` for multiple fields + array files
+app.post('/register', upload.fields([{ name: 'attachments', maxCount: 5 }]), async (req, res) => {
+  const fields = req.body;
+  const files = req.files?.attachments || [];
 
-  console.log('[DEBUG] Received data keys:', Object.keys(data));
-  console.log('[DEBUG] Payload size:', JSON.stringify(data).length);
+  console.log('[DEBUG] Received fields:', Object.keys(fields));
+  console.log('[DEBUG] Received files count:', files.length);
 
-  if (!data || Object.keys(data).length === 0) {
-    console.error('[✗] Invalid payload: Body is empty');
-    return res.status(400).send('❌ Invalid payload: Body is empty');
-  }
+  const data = {
+    ...fields,
+    attachments: files.map(file => ({
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      buffer: file.buffer.toString('base64'), // Optional: encode for transport
+    }))
+  };
 
   try {
     if (!channel) {
@@ -76,11 +86,10 @@ app.post('/register', async (req, res) => {
     const payload = Buffer.from(JSON.stringify(data));
     channel.sendToQueue(QUEUE, payload, { persistent: true });
 
-    console.log(`[→] Published to ${QUEUE}:`, data);
+    console.log(`[→] Published to ${QUEUE}:`, { ...fields, attachments: files.map(f => f.originalname) });
     res.status(200).json({ message: '✅ Message queued' });
   } catch (err) {
     console.error('[✗] Failed to queue message:', err.message);
-    console.error('[✗] Stack Trace:', err.stack);
     res.status(500).send('Internal Server Error');
   }
 });

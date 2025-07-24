@@ -1,53 +1,80 @@
 'use client';
 
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { landTitleSchema } from "../validation/landTitleSchema";
 import {
-  Box, Button, TextField, Typography, MenuItem
+  Box,
+  Button,
+  TextField,
+  Typography,
+  MenuItem
 } from "@mui/material";
 import axios from "axios";
 
+const ncrCities = [
+  "Manila", "Quezon City", "Caloocan", "Makati", "Pasig", "Taguig",
+  "Mandaluyong", "Pasay", "Parañaque", "Las Piñas", "Muntinlupa",
+  "Malabon", "Navotas", "Valenzuela", "San Juan", "Marikina", "Pateros"
+];
+
 const defaultValues = {
-  owner_name: "", contact_info: "", address: "",
-  title_number: "", property_location: "", lot_number: "",
-  survey_number: "", area_size: "", classification: "",
-  registration_date: "", registrar_office: "", previous_title_number: "",
-  encumbrances: "", status: "Active",
+  owner_name: "",
+  contactNo: "",
+  address: "",
+  email_address: "",
+  title_number: "",
+  propertyLocation: "",
+  lotNumber: "",
+  survey_number: "",
+  areaSize: "",
+  classification: "",
+  registrationDate: "",
+  registrarOffice: "",
+  previousTitleNumber: "",
+  encumbrances: "",
+  status: "Active",
+  attachments: null,
 };
 
 export default function LandTitleForm() {
-  const [selectedFile, setSelectedFile] = useState(null);
-
   const {
-    register, handleSubmit, formState: { errors }, reset
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+    watch
   } = useForm({
     resolver: zodResolver(landTitleSchema),
-    defaultValues,
+    defaultValues
   });
 
   const onSubmit = async (data) => {
     const formData = new FormData();
 
-    // Append files (if any)
-    if (selectedFile && selectedFile.length > 0) {
-      for (let i = 0; i < selectedFile.length; i++) {
-        formData.append("attachments", selectedFile[i]);
+    const files = watch("attachments");
+    if (files && files.length > 0) {
+      Array.from(files).forEach(file => {
+        formData.append("attachments", file);
+      });
+    }
+
+    for (const key in data) {
+      if (key !== "attachments") {
+        formData.append(key, data[key]);
       }
     }
 
-    // Append other fields
-    for (const key in data) {
-      formData.append(key, data[key]);
-    }
-
     try {
-      const response = await axios.post("http://localhost:30081/land/register", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await axios.post(
+        "http://localhost:30081/land/register",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data"
+          }
+        }
+      );
 
       console.log("✅ Registered:", response.data);
       alert("✅ Land Registration Successful!");
@@ -60,31 +87,55 @@ export default function LandTitleForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={handleSubmit(onSubmit)} encType="multipart/form-data">
       <Typography variant="h6" mt={2}>👤 Owner Information</Typography>
+
       <TextField fullWidth margin="normal" label="Owner Name" {...register("owner_name")} error={!!errors.owner_name} helperText={errors.owner_name?.message} />
-      <TextField fullWidth margin="normal" label="Contact Info" {...register("contact_info")} error={!!errors.contact_info} helperText={errors.contact_info?.message} />
+      <TextField fullWidth margin="normal" label="Contact Info" {...register("contactNo")} error={!!errors.contactNo} helperText={errors.contactNo?.message} />
       <TextField fullWidth margin="normal" label="Address" {...register("address")} error={!!errors.address} helperText={errors.address?.message} />
+      <TextField fullWidth margin="normal" label="Email Address" {...register("email_address")} error={!!errors.email_address} helperText={errors.email_address?.message} />
 
       <Typography variant="h6" mt={4}>📄 Land Title Information</Typography>
-      <TextField fullWidth margin="normal" label="Title Number" {...register("title_number")} error={!!errors.title_number} helperText={errors.title_number?.message} />
-      <TextField fullWidth margin="normal" label="Property Location" {...register("property_location")} error={!!errors.property_location} helperText={errors.property_location?.message} />
-      <TextField fullWidth margin="normal" label="Lot Number" {...register("lot_number")} error={!!errors.lot_number} helperText={errors.lot_number?.message} />
-      <TextField fullWidth margin="normal" label="Survey Number" {...register("survey_number")} error={!!errors.survey_number} helperText={errors.survey_number?.message} />
-      <TextField fullWidth margin="normal" label="Area Size (sqm)" {...register("area_size")} error={!!errors.area_size} helperText={errors.area_size?.message} />
-      <TextField fullWidth margin="normal" label="Classification" {...register("classification")} error={!!errors.classification} helperText={errors.classification?.message} />
-      <TextField fullWidth margin="normal" label="Registration Date" type="date" InputLabelProps={{ shrink: true }} {...register("registration_date")} error={!!errors.registration_date} helperText={errors.registration_date?.message} />
-      <TextField fullWidth margin="normal" label="Registrar Office" {...register("registrar_office")} error={!!errors.registrar_office} helperText={errors.registrar_office?.message} />
-      <TextField fullWidth margin="normal" label="Previous Title Number" {...register("previous_title_number")} error={!!errors.previous_title_number} helperText={errors.previous_title_number?.message} />
-      <TextField fullWidth margin="normal" label="Encumbrances" {...register("encumbrances")} error={!!errors.encumbrances} helperText={errors.encumbrances?.message} />
+
+      <TextField fullWidth margin="normal" label="Title Number (Auto-generated)" value={watch("title_number") ?? ''} disabled />
+      
+      <TextField select fullWidth margin="normal" label="Property Location" {...register("propertyLocation")} error={!!errors.propertyLocation} helperText={errors.propertyLocation?.message}>
+        {ncrCities.map(city => (
+          <MenuItem key={city} value={city}>{city}</MenuItem>
+        ))}
+      </TextField>
+
+      <TextField fullWidth margin="normal" label="Lot Number" {...register("lotNumber")} error={!!errors.lotNumber} helperText={errors.lotNumber?.message} />
+      <TextField fullWidth margin="normal" label="Survey Number (Auto-generated)" value={watch("survey_number") ?? ''} disabled />
+      <TextField fullWidth margin="normal" label="Area Size (sqm)" {...register("areaSize")} error={!!errors.areaSize} helperText={errors.areaSize?.message} />
+
+      <TextField select fullWidth margin="normal" label="Classification" {...register("classification")} error={!!errors.classification} helperText={errors.classification?.message}>
+        <MenuItem value="Residential">Residential</MenuItem>
+        <MenuItem value="Corporate">Corporate</MenuItem>
+        <MenuItem value="Government Property">Government Property</MenuItem>
+      </TextField>
 
       <TextField
-        select fullWidth margin="normal" label="Status"
-        defaultValue="Active"
-        {...register("status")}
-        error={!!errors.status}
-        helperText={errors.status?.message}
-      >
+        fullWidth
+        margin="normal"
+        label="Registration Date"
+        type="date"
+        InputLabelProps={{ shrink: true }}
+        {...register("registrationDate")}
+        error={!!errors.registrationDate}
+        helperText={errors.registrationDate?.message}
+      />
+
+      <TextField select fullWidth margin="normal" label="Registrar Office" {...register("registrarOffice")} error={!!errors.registrarOffice} helperText={errors.registrarOffice?.message}>
+        {ncrCities.map(city => (
+          <MenuItem key={city} value={city}>{city}</MenuItem>
+        ))}
+      </TextField>
+
+      <TextField fullWidth margin="normal" label="Previous Title Number" {...register("previousTitleNumber")} error={!!errors.previousTitleNumber} helperText={errors.previousTitleNumber?.message} />
+      <TextField fullWidth margin="normal" label="Encumbrances" {...register("encumbrances")} error={!!errors.encumbrances} helperText={errors.encumbrances?.message} />
+
+      <TextField select fullWidth margin="normal" label="Status" defaultValue="Active" {...register("status")} error={!!errors.status} helperText={errors.status?.message}>
         <MenuItem value="Active">Active</MenuItem>
         <MenuItem value="Cancelled">Cancelled</MenuItem>
         <MenuItem value="Pending">Pending</MenuItem>
@@ -97,8 +148,7 @@ export default function LandTitleForm() {
           type="file"
           accept="application/pdf,image/*"
           multiple
-          name="attachments"
-          onChange={(e) => setSelectedFile(e.target.files)}
+          {...register("attachments")}
         />
         {errors.attachments && (
           <Typography variant="caption" color="error">

@@ -7,7 +7,8 @@ const app = express();
 const PORT = 3000;
 
 // Parse JSON body
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Redis client
 const redis = new Redis({ host: 'redis', port: 6379 });

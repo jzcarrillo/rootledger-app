@@ -12,7 +12,8 @@ app.use(cors({
 }));
 app.options('*', cors());
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // ✅ Request logger
 app.use((req, res, next) => {
@@ -58,7 +59,11 @@ connectRabbitMQ();
 app.post('/register', async (req, res) => {
   const data = req.body;
 
+  console.log('[DEBUG] Received data keys:', Object.keys(data));
+  console.log('[DEBUG] Payload size:', JSON.stringify(data).length);
+
   if (!data || Object.keys(data).length === 0) {
+    console.error('[✗] Invalid payload: Body is empty');
     return res.status(400).send('❌ Invalid payload: Body is empty');
   }
 
@@ -75,6 +80,7 @@ app.post('/register', async (req, res) => {
     res.status(200).json({ message: '✅ Message queued' });
   } catch (err) {
     console.error('[✗] Failed to queue message:', err.message);
+    console.error('[✗] Stack Trace:', err.stack);
     res.status(500).send('Internal Server Error');
   }
 });

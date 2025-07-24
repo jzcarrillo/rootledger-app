@@ -3,6 +3,11 @@ const rateLimit = require('express-rate-limit');
 const client = require('prom-client');
 const axios = require('axios');
 const os = require('os');
+const multer = require("multer");
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+
 
 const app = express();
 const PORT = 8081;
@@ -26,7 +31,9 @@ register.registerMetric(totalRequests);
 register.registerMetric(throttledRequests);
 
 // === Middleware ===
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', FRONTEND);
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -58,12 +65,24 @@ const submitLimiter = rateLimit({
 });
 
 // === POST /submit forwarding to lambda-producer-service
-app.post('/land/register', submitLimiter, async (req, res) => {
+app.post('/land/register', submitLimiter, upload.array('attachments'), async (req, res) => {
   console.log(`[LOG] Incoming POST request to /land/register from ${os.hostname()}`);
   try {
+    const attachments = req.files || [];
+    const formFields = req.body;
+
+    const payload = {
+      ...formFields,
+      attachments: attachments.map(file => ({
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        buffer: file.buffer.toString('base64'), // base64 encode for safe transport
+      })),
+    };
+
     const response = await axios.post(
       'http://lambda-producer:4000/register', // ✅ fixed endpoint
-      req.body,
+      payload,
       {
         headers: {
           'Content-Type': 'application/json',

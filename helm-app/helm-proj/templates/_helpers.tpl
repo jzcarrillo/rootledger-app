@@ -71,7 +71,7 @@ lambda-producer
 Always return just "rabbitmq" as the name — no release name prefix.
 */}}
 {{- define "rabbitmq.fullname" -}}
-rabbitmq
+rabbitmq-landregistry
 {{- end }}
 
 {{/*

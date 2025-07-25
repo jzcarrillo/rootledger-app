@@ -74,6 +74,11 @@ lambdaProducer:
     port: 4000
     targetPort: 4000
 
+  env:
+    - name: RABBITMQ_HOST
+      value: rabbitmq-landregistry.helm-app.svc.cluster.local
+
+
 rabbitmq:
   image:
     repository: rabbitmq

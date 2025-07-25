@@ -93,7 +93,7 @@ $services = @(
     "frontend",
     "api-gateway",
     "lambda-producer",
-    "rabbitmq",
+    "rabbitmq-landregistry",
     "lambda-consumer",
     "backend",
     "redis",
@@ -239,9 +239,9 @@ $portForwardLambda = Start-Process -FilePath "kubectl" `
   -ArgumentList "port-forward", "svc/lambda-producer", "4000:4000", "-n", "helm-app" `
   -NoNewWindow -PassThru
 
-Write-Host "Port-forwarding rabbitmq service on port 15672 (management UI) and 5672 (AMQP)..."
+Write-Host "Port-forwarding rabbitmq land-registry on port 15672 (management UI) and 5672 (AMQP)..."
 $portForwardRabbit = Start-Process -FilePath "kubectl" `
-  -ArgumentList "port-forward", "svc/rabbitmq", "15672:15672", "5672:5672", "-n", "helm-app" `
+  -ArgumentList "port-forward", "svc/rabbitmq-landregistry", "15672:15672", "5672:5672", "-n", "helm-app" `
   -NoNewWindow -PassThru
 
 Write-Host "Port-forwarding api-gateway service on port 8081..."

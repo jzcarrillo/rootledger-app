@@ -78,7 +78,6 @@ lambdaProducer:
     - name: RABBITMQ_HOST
       value: rabbitmq-landregistry.helm-app.svc.cluster.local
 
-
 rabbitmq:
   image:
     repository: rabbitmq
@@ -100,13 +99,13 @@ rabbitmq:
 
   secretName: rabbitmq-secret   
 
-lambdaConsumer:
-  fullnameOverride: lambda-consumer
+consumerLandRegistry:
+  fullnameOverride: consumer-landregistry
   replicaCount: 1
   image:
-    repository: lambda-consumer
+    repository: consumer-landregistry
     tag: latest
-    pullPolicy: Never
+    pullPolicy: IfNotPresent
   containerPort: 4001
   service:
     type: ClusterIP
@@ -183,6 +182,12 @@ postgres:
     user: myuser
     password: mypass
     database: mydb
+
+  args:
+    - "-c"
+    - "log_statement=all"
+    - "-c"
+    - "log_duration=on"    
 
   initdbScripts:
     init.sql: |

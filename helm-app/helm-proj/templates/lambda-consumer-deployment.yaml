@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "lambda-consumer.fullname" . }}
+  name: {{ include "consumer-landregistry.fullname" . }}
   namespace: {{ .Values.namespace | default .Release.Namespace }}
   labels:
-    app: {{ include "lambda-consumer.name" . }}
+    app: {{ include "consumer-landregistry.name" . }}
 spec:
-  replicas: {{ .Values.lambdaConsumer.replicaCount }}
+  replicas: {{ .Values.consumerLandRegistry.replicaCount }}
   selector:
     matchLabels:
-      app: {{ include "lambda-consumer.name" . }}
+      app: {{ include "consumer-landregistry.name" . }}
   template:
     metadata:
       labels:
-        app: {{ include "lambda-consumer.name" . }}
+        app: {{ include "consumer-landregistry.name" . }}
     spec:
       restartPolicy: Always
 
@@ -33,10 +33,10 @@ spec:
 
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.lambdaConsumer.image.repository }}:{{ .Values.lambdaConsumer.image.tag }}"
-          imagePullPolicy: {{ .Values.lambdaConsumer.image.pullPolicy }}
+          image: "{{ .Values.consumerLandRegistry.image.repository }}:{{ .Values.consumerLandRegistry.image.tag }}"
+          imagePullPolicy: {{ .Values.consumerLandRegistry.image.pullPolicy }}
           env:
             - name: RABBITMQ_URL
-              value: "{{ .Values.lambdaConsumer.rabbitmqUrl }}"
+              value: "{{ .Values.consumerLandRegistry.rabbitmqUrl }}"
           ports:
-            - containerPort: {{ .Values.lambdaConsumer.containerPort }}
+            - containerPort: {{ .Values.consumerLandRegistry.containerPort }}

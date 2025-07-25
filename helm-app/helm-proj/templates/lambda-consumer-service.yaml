@@ -1,15 +1,15 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "lambda-consumer.fullname" . }}
+  name: {{ include "consumer-landregistry.fullname" . }}
   namespace: {{ .Values.namespace | default .Release.Namespace }}
   labels:
-    app: {{ include "lambda-consumer.name" . }}
+    app: {{ include "consumer-landregistry.name" . }}
 spec:
-  type: {{ .Values.lambdaConsumer.service.type }}
+  type: {{ .Values.consumerLandRegistry.service.type }}
   selector:
-    app: {{ include "lambda-consumer.name" . }}
+    app: {{ include "consumer-landregistry.name" . }}
   ports:
     - protocol: TCP
-      port: {{ .Values.lambdaConsumer.service.port }}
-      targetPort: {{ .Values.lambdaConsumer.service.targetPort }}
+      port: {{ .Values.consumerLandRegistry.service.port }}
+      targetPort: {{ .Values.consumerLandRegistry.service.targetPort }}

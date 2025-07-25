@@ -75,17 +75,17 @@ rabbitmq-landregistry
 {{- end }}
 
 {{/*
-Always return just "lambda-consumer" as the name
+Always return just "consumer-landregistry" as the name
 */}}
-{{- define "lambda-consumer.name" -}}
-lambda-consumer
+{{- define "consumer-landregistry.name" -}}
+consumer-landregistry
 {{- end }}
 
 {{/*
-Always return just "lambda-consumer" as the name — no release name prefix.
+Always return just "consumer-landregistry" as the name — no release name prefix.
 */}}
-{{- define "lambda-consumer.fullname" -}}
-lambda-consumer
+{{- define "consumer-landregistry.fullname" -}}
+consumer-landregistry
 {{- end }}
 
 {{/*

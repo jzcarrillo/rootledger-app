@@ -2,8 +2,8 @@ const amqp = require('amqplib');
 const express = require('express');
 const axios = require('axios');
 
-const QUEUE = 'submit_queue'; // match producer queue
-const RABBITMQ_URL = 'amqp://myuser:mypass@rabbitmq.helm-app.svc.cluster.local:5672';
+const QUEUE = 'queue_land.registry'; // match producer queue
+const RABBITMQ_URL = 'amqp://myuser:mypass@rabbitmq-landregistry';
 const BACKEND_URL = 'http://backend-service.helm-app.svc.cluster.local:3000/process';
 const PORT = 4001;
 

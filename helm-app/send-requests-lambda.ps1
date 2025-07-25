@@ -1,6 +1,6 @@
 Write-Host "`nSending 100 POST requests to lambda-producer..."
 
-$uri = "http://localhost:4000/submit"
+$uri = "http://localhost:4000/register"
 $headers = @{ "Content-Type" = "application/json" }
 $body = '{"test":"ping"}'
 

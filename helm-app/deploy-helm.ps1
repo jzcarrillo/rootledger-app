@@ -373,7 +373,7 @@ if (-not $rabbitmqPod) {
 # Step 11: Send bulk request to Lambda Producer 
 Write-Host "`nSending 50 POST requests to lambda-producer..."
 
-$uri = "http://localhost:4000/submit"
+$uri = "http://localhost:4000/register"
 $headers = @{ "Content-Type" = "application/json" }
 $body = '{"test":"ping"}'
 
@@ -411,7 +411,7 @@ for ($i = 1; $i -le 1000; $i++) {
         Write-Output "`nSend request $i."
         Write-Output "StatusCode        : 429"
         Write-Output "StatusDescription : Too Many Requests"
-        Write-Output "Content           : {""message"":""Too many requests to /submit""}"
+        Write-Output "Content           : {""message"":""Too many requests to /land/register""}"
     }
 
     Start-Sleep -Milliseconds 100  # Throttle interval between requests
@@ -420,7 +420,7 @@ for ($i = 1; $i -le 1000; $i++) {
 # Step 12.1: Send bulk request to api-gateway
 Write-Host "`nSending 500 POST requests to api-gateway... Error 429 Too many request"
 
-$uri = "http://localhost:30081/submit"
+$uri = "http://localhost:30081/land/register"
 $headers = @{ "Content-Type" = "application/json" }
 
 for ($i = 1; $i -le 500; $i++) {
@@ -436,7 +436,7 @@ for ($i = 1; $i -le 500; $i++) {
         Write-Output "`nSend request $i."
         Write-Output "StatusCode        : 429"
         Write-Output "StatusDescription : Too Many Requests"
-        Write-Output "Content           : {""message"":""Too many requests to /submit""}"
+        Write-Output "Content           : {""message"":""Too many requests to /land/register""}"
     }
 
     Start-Sleep -Milliseconds 200  # Throttle interval between requests

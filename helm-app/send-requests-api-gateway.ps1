@@ -1,4 +1,4 @@
-$uri = "http://localhost:30081/submit"
+$uri = "http://localhost:30081/land/register"
 $headers = @{ "Content-Type" = "application/json" }
 
 for ($i = 1; $i -le 10000; $i++) {
@@ -14,7 +14,7 @@ for ($i = 1; $i -le 10000; $i++) {
         Write-Output "`nSend request $i."
         Write-Output "StatusCode        : 429"
         Write-Output "StatusDescription : Too Many Requests"
-        Write-Output "Content           : {""message"":""Too many requests to /submit""}"
+        Write-Output "Content           : {""message"":""Too many requests to /register""}"
     }
 
     Start-Sleep -Milliseconds 5  # Adjust delay if needed

@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "backend-service.fullname" . }}
+  name: {{ include "backend-landregistry.fullname" . }}
   namespace: {{ .Values.namespace | default .Release.Namespace }}
 spec:
-  type: {{ .Values.backendService.service.type }}
+  type: {{ .Values.backendLandRegistry.service.type }}
   selector:
-    app: {{ include "backend-service.name" . }}
+    app: {{ include "backend-landregistry.name" . }}
   ports:
-    - port: {{ .Values.backendService.service.port }}
-      targetPort: {{ .Values.backendService.service.targetPort }}
+    - port: {{ .Values.backendLandRegistry.service.port }}
+      targetPort: {{ .Values.backendLandRegistry.service.targetPort }}

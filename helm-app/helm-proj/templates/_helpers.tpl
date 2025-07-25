@@ -89,17 +89,17 @@ consumer-landregistry
 {{- end }}
 
 {{/*
-Always return just "backend-service" as the name
+Always return just "backeend-landregistry" as the name
 */}}
-{{- define "backend-service.name" -}}
-backend-service
+{{- define "backend-landregistry.name" -}}
+backend-landregistry
 {{- end }}
 
 {{/*
-Always return just "backend-service" as the fullname — no release name prefix
+Always return just "backend-landregistry" as the fullname — no release name prefix
 */}}
-{{- define "backend-service.fullname" -}}
-backend-service
+{{- define "backend-landregistry.fullname" -}}
+backend-landregistry
 {{- end }}
 
 

@@ -113,22 +113,22 @@ consumerLandRegistry:
     targetPort: 4001
   rabbitmqUrl: amqp://myuser:mypass@rabbitmq.helm-app.svc.cluster.local:5672
 
-backendService:
+backendLandRegistry:
   enabled: true
-  fullnameOverride: backend
+  fullnameOverride: backend-landregistry
   replicaCount: 1
 
   image:
-    repository: backend
+    repository: backend-landregistry
     tag: latest
-    pullPolicy: Never
+    pullPolicy: IfNotPresent
   containerPort: 3000
 
   service:
     type: ClusterIP
     port: 3000
     targetPort: 3000
-    
+  
 
   # databaseUrl: postgres://myuser:mypass@postgres.helm-app.svc.cluster.local:5432/mydb
 

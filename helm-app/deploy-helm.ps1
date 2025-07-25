@@ -95,7 +95,7 @@ $services = @(
     "lambda-producer",
     "rabbitmq-landregistry",
     "consumer-landregistry",
-    "backend",
+    "backend-landregistry",
     "redis",
     "postgres",
     "prometheus",
@@ -141,7 +141,7 @@ Write-OK "Dry-run successful."
 Write-Info "Installing non-backend components first..."
 
 helm upgrade --install $ReleaseName $ChartPath -n $Namespace `
-  --set backendService.enabled=false `
+  --set backendLandRegistry.enabled=false `
   --wait --debug
 
 if ($LASTEXITCODE -ne 0) {
@@ -193,7 +193,7 @@ Write-OK "PostgreSQL is ready."
 # Step 4.2: Deploy backend now that dependencies are ready
 Write-Info "`n[STEP 4.2] Deploying backend now that Redis and PostgreSQL are ready..."
 helm upgrade --install $ReleaseName $ChartPath -n $Namespace `
-  --set backendService.enabled=true `
+  --set backendLandRegistry.enabled=true `
   --wait --debug
 
 if ($LASTEXITCODE -ne 0) {
@@ -249,14 +249,14 @@ $portForwardApiGateway = Start-Process -FilePath "kubectl" `
   -ArgumentList "port-forward", "svc/api-gateway", "8081:8081", "-n", "helm-app" `
   -NoNewWindow -PassThru
 
-Write-Host "Port-forwarding oonsumer-landregistry service on port 4001..."
+Write-Host "Port-forwarding consumer-landregistry service on port 4001..."
 $portForwardLambda = Start-Process -FilePath "kubectl" `
   -ArgumentList "port-forward", "svc/consumer-landregistry", "4001:4001", "-n", "helm-app" `
   -NoNewWindow -PassThru
 
-Write-Host "Port-forwarding backend service on port 3000..."
+Write-Host "Port-forwarding backend-landregistry on port 3000..."
 $portForwardLambda = Start-Process -FilePath "kubectl" `
-  -ArgumentList "port-forward", "svc/backend-service", "3000:3000", "-n", "helm-app" `
+  -ArgumentList "port-forward", "svc/backend-landregistry", "3000:3000", "-n", "helm-app" `
   -NoNewWindow -PassThru  
 # Wait a moment to ensure port-forwards are established
 

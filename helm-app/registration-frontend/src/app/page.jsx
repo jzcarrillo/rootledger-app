@@ -31,7 +31,7 @@ export default function HomePage() {
   useEffect(() => {
     const fetchLandTitles = async () => {
       try {
-        const res = await axios.get(`http://backend-service.helm-app.svc.cluster.local:3000/process`);
+        const res = await axios.get(`http://backend-landregistry.helm-app.svc.cluster.local:3000/process`);
         setLandTitles(res.data);
       } catch (err) {
         console.error('Failed to fetch:', err);

@@ -1,33 +1,33 @@
-{{- if .Values.backendService.enabled }}
+{{- if .Values.backendLandRegistry.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "backend-service.fullname" . }}
+  name: {{ include "backend-landregistry.fullname" . }}
   namespace: {{ .Values.namespace | default .Release.Namespace }}
   labels:
-    app: {{ include "backend-service.name" . }}
+    app: {{ include "backend-landregistry.name" . }}
 spec:
-  replicas: {{ .Values.backendService.replicaCount }}
+  replicas: {{ .Values.backendLandRegistry.replicaCount }}
   selector:
     matchLabels:
-      app: {{ include "backend-service.name" . }}
+      app: {{ include "backend-landregistry.name" . }}
   template:
     metadata:
       labels:
-        app: {{ include "backend-service.name" . }}
+        app: {{ include "backend-landregistry.name" . }}
     spec:
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.backendService.image.repository }}:{{ .Values.backendService.image.tag }}"
-          imagePullPolicy: {{ .Values.backendService.image.pullPolicy }}
+          image: "{{ .Values.backendLandRegistry.image.repository }}:{{ .Values.backendLandRegistry.image.tag }}"
+          imagePullPolicy: {{ .Values.backendLandRegistry.image.pullPolicy }}
           ports:
-            - containerPort: {{ .Values.backendService.containerPort }}
+            - containerPort: {{ .Values.backendLandRegistry.containerPort }}
           env:
             - name: DATABASE_URL
-              value: "{{ .Values.backendService.databaseUrl }}"
+              value: "{{ .Values.backendLandRegistry.databaseUrl }}"
             - name: REDIS_HOST
-              value: "{{ .Values.backendService.redis.host }}"
+              value: "{{ .Values.backendLandRegistry.redis.host }}"
             - name: REDIS_PORT
-              value: "{{ .Values.backendService.redis.port }}"
-              restartPolicy: Always
+              value: "{{ .Values.backendLandRegistry.redis.port }}"
+      restartPolicy: Always
 {{- end }}

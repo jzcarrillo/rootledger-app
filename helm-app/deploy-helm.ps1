@@ -96,6 +96,7 @@ $services = @(
     "rabbitmq-landregistry",
     "consumer-landregistry",
     "backend-landregistry",
+    "frontend-landregistration"
     "redis",
     "postgres",
     "prometheus",
@@ -282,6 +283,21 @@ $portForwardAlertmanager = Start-Process -FilePath "kubectl" `
 
 # Wait a moment to ensure port-forwards are established
 Start-Sleep -Seconds 3
+
+# Run the Registration-Frontend
+$projectPath = "C:\rootledger\helm-app\frontend-landregistration"
+
+# Navigate to the frontend directory
+Set-Location -Path $projectPath
+
+# Start the frontend server
+Start-Process powershell -ArgumentList "npm run dev" -NoNewWindow
+
+# Wait a few seconds to give time for dev server to start
+Start-Sleep -Seconds 3
+
+# Open the app in the browser (assumes it's at localhost:4005)
+Start-Process "http://localhost:4005"
 
 # Check ALB
 if ($albPort) {

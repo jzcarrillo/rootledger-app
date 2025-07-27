@@ -1,34 +1,34 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "postgres.fullname" . }}
+  name: {{ include "postgres-landregistry.fullname" . }}
   namespace: {{ .Values.namespace | default .Release.Namespace }}
   labels:
-    app: {{ include "postgres.name" . }}
+    app: {{ include "postgres-landregistry.name" . }}
 spec:
-  replicas: {{ .Values.postgres.replicaCount }}
+  replicas: {{ .Values.postgresLandRegistry.replicaCount }}
   selector:
     matchLabels:
-      app: {{ include "postgres.name" . }}
+      app: {{ include "postgres-landregistry.name" . }}
   template:
     metadata:
       labels:
-        app: {{ include "postgres.name" . }}
+        app: {{ include "postgres-landregistry.name" . }}
     spec:
       restartPolicy: Always
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
-          imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+          image: "{{ .Values.postgresLandRegistry.image.repository }}:{{ .Values.postgresLandRegistry.image.tag }}"
+          imagePullPolicy: {{ .Values.postgresLandRegistry.image.pullPolicy }}
           env:
             - name: POSTGRES_USER
-              value: "{{ .Values.postgres.auth.user }}"
+              value: "{{ .Values.postgresLandRegistry.auth.user }}"
             - name: POSTGRES_PASSWORD
-              value: "{{ .Values.postgres.auth.password }}"
+              value: "{{ .Values.postgresLandRegistry.auth.password }}"
             - name: POSTGRES_DB
-              value: "{{ .Values.postgres.auth.database }}"
+              value: "{{ .Values.postgresLandRegistry.auth.database }}"
           ports:
-            - containerPort: {{ .Values.postgres.containerPort }}
+            - containerPort: {{ .Values.postgresLandRegistry.containerPort }}
           volumeMounts:
             - name: pgdata
               mountPath: /var/lib/postgresql/data

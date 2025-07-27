@@ -98,7 +98,7 @@ $services = @(
     "backend-landregistry",
     "frontend-landregistration"
     "redis",
-    "postgres",
+    "postgres-landregistry",
     "prometheus",
     "alertmanager",
     "grafana"

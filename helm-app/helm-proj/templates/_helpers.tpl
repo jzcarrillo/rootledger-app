@@ -118,16 +118,16 @@ redis
 {{- end }}
 
 {{/*
-Always return just "postgres" as the name
+Always return just "postgres-landregistry" as the name
 */}}
-{{- define "postgres.name" -}}
-postgres
+{{- define "postgres-landregistry.name" -}}
+postgres-landregistry
 {{- end }}
 
 {{/*
-Always return just "postgres" as the name — no release name prefix.
+Always return just "postgres-landregistry" as the name — no release name prefix.
 */}}
-{{- define "postgres.fullname" -}}
+{{- define "postgres-landregistry.fullname" -}}
 postgres
 {{- end }}
 

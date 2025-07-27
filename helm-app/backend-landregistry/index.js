@@ -15,7 +15,7 @@ const redis = new Redis({ host: 'redis', port: 6379 });
 
 // PostgreSQL client
 const pgClient = new Client({
-  host: 'postgres',
+  host: 'postgres-landregistry',
   port: 5432,
   user: 'myuser',
   password: 'mypass',

@@ -141,7 +141,7 @@ backendLandRegistry:
       timeout: 60
 
   postgres:
-    host: postgres.helm-app.svc.cluster.local
+    host: postgres-landregistry.helm-app.svc.cluster.local
     port: 5432
     wait:
       enabled: true
@@ -162,8 +162,7 @@ redis:
     port: 6379
     targetPort: 6379
 
-postgres:
-  fullnameOverride: postgres
+postgresLandRegistry:
   replicaCount: 1
 
   image:

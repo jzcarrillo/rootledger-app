@@ -1,0 +1,21 @@
+# .helmignore
+
+# node / frontend stuff
+node_modules
+.next
+build
+dist
+*.log
+
+# binaries
+*.dll
+*.gz
+*.zip
+*.tar
+*.tgz
+*.pack.gz
+
+# system files
+.DS_Store
+Thumbs.db
+.env

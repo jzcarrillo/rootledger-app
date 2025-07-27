@@ -118,18 +118,19 @@ redis
 {{- end }}
 
 {{/*
-Always return just "postgres-landregistry" as the name
+Return the name for postgres-landregistry (override via Values if needed)
 */}}
 {{- define "postgres-landregistry.name" -}}
-postgres-landregistry
+{{- default "postgres-landregistry" .Values.postgresLandRegistry.nameOverride -}}
 {{- end }}
 
 {{/*
-Always return just "postgres-landregistry" as the name — no release name prefix.
+Return the fullname for postgres-landregistry (override via Values if needed)
 */}}
 {{- define "postgres-landregistry.fullname" -}}
-postgres
+{{- default "postgres-landregistry" .Values.postgresLandRegistry.fullnameOverride -}}
 {{- end }}
+
 
 {{/*
 Always return just "prometheus" as the name

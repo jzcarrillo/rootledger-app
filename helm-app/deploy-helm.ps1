@@ -174,22 +174,33 @@ if (-not $redisReady) {
 Write-OK "Redis is ready."
 
 # PostgreSQL readiness check
-$pgPod = kubectl get pods -n helm-app -l app=postgres -o jsonpath="{.items[0].metadata.name}"
+$pgPod = kubectl get pods -n helm-app -l app=postgres-landregistry -o jsonpath="{.items[0].metadata.name}"
+
+if (-not $pgPod) {
+    Write-Err "PostgreSQL pod not found! Make sure label 'app=postgres-landregistry' is correct."
+    kubectl get pods -n helm-app --show-labels
+    exit 1
+}
+
 $pgReady = $false
 for ($i = 1; $i -le 10; $i++) {
+    Write-Host "Checking PostgreSQL readiness... attempt $i/10"
     $pgCheckCmd = "PGPASSWORD=mypass psql -U myuser -d mydb -c '\q'"
     $output = kubectl exec -n helm-app $pgPod -- /bin/sh -c $pgCheckCmd
+
     if ($LASTEXITCODE -eq 0) {
         $pgReady = $true
         break
     }
     Start-Sleep -Seconds 3
 }
+
 if (-not $pgReady) {
     Write-Err "PostgreSQL not ready after retries. Aborting."
     exit 1
 }
-Write-OK "PostgreSQL is ready."
+
+Write-Host "PostgreSQL is ready."
 
 # Step 4.2: Deploy backend now that dependencies are ready
 Write-Info "`n[STEP 4.2] Deploying backend now that Redis and PostgreSQL are ready..."

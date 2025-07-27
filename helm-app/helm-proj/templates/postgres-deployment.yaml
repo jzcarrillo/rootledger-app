@@ -17,7 +17,7 @@ spec:
     spec:
       restartPolicy: Always
       containers:
-        - name: {{ .Chart.Name }}
+        - name: {{ include "postgres-landregistry.name" . }}
           image: "{{ .Values.postgresLandRegistry.image.repository }}:{{ .Values.postgresLandRegistry.image.tag }}"
           imagePullPolicy: {{ .Values.postgresLandRegistry.image.pullPolicy }}
           env:

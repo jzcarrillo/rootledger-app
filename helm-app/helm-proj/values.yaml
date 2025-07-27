@@ -162,7 +162,10 @@ redis:
     port: 6379
     targetPort: 6379
 
+fullnameOverride: postgres-landregistry
+
 postgresLandRegistry:
+  fullnameOverride: postgres-landregistry
   replicaCount: 1
 
   image:
@@ -219,7 +222,7 @@ prometheus:
     enabled: true
     clusterRoleName: prometheus-cluster-role
     clusterRoleBindingName: prometheus-cluster-rolebinding
-    createClusterRole: true
+    createClusterRole: false
 
   service:
     type: NodePort

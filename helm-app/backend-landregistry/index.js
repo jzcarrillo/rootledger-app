@@ -51,9 +51,9 @@ app.get('/get', async (req, res) => {
 // PostgreSQL test route
 app.get('/dbtest', async (req, res) => {
   try {
-    await pgClient.query(`CREATE TABLE IF NOT EXISTS test_table (id SERIAL PRIMARY KEY, message TEXT)`);
-    await pgClient.query(`INSERT INTO test_table (message) VALUES ('Hello from PostgreSQL!')`);
-    const result = await pgClient.query(`SELECT * FROM test_table`);
+    await pgClient.query(`CREATE TABLE IF NOT EXISTS land_titles (id SERIAL PRIMARY KEY, message TEXT)`);
+    await pgClient.query(`INSERT INTO land_titles (message) VALUES ('Hello from PostgreSQL!')`);
+    const result = await pgClient.query(`SELECT * FROM land_titles`);
     res.json(result.rows);
   } catch (err) {
     console.error('[✗] PostgreSQL error:', err.message);
@@ -71,8 +71,8 @@ app.post('/process', async (req, res) => {
 
   try {
     const message = JSON.stringify(payload);
-    await pgClient.query(`CREATE TABLE IF NOT EXISTS test_table (id SERIAL PRIMARY KEY, message TEXT)`);
-    await pgClient.query(`INSERT INTO test_table (message) VALUES ($1)`, [message]);
+    await pgClient.query(`CREATE TABLE IF NOT EXISTS land_titles (id SERIAL PRIMARY KEY, message TEXT)`);
+    await pgClient.query(`INSERT INTO land_titles (message) VALUES ($1)`, [message]);
     console.log('[✓] Message inserted into PostgreSQL from Lambda Consumer:', payload);
     res.status(201).json({ message: '✅ Stored in DB' });
   } catch (err) {
@@ -114,7 +114,7 @@ app.listen(PORT, '0.0.0.0', () => {
 // 🔍 Fetch all submitted messages from test_table
 app.get('/logs', async (req, res) => {
   try {
-    const result = await pgClient.query(`SELECT id, message FROM test_table ORDER BY id DESC`);
+    const result = await pgClient.query(`SELECT id, message FROM land_titles ORDER BY id DESC`);
     
     // Parse JSON strings into real objects if possible
     const rows = result.rows.map(row => {

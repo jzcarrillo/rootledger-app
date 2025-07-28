@@ -1,48 +1,51 @@
 import { z } from "zod";
 
-const ncrCities = [
-  "Manila", "Quezon City", "Makati", "Taguig", "Pasig", "Mandaluyong",
-  "Caloocan", "Parañaque", "Las Piñas", "Pasay", "San Juan", "Marikina",
-  "Valenzuela", "Malabon", "Navotas", "Pateros", "Muntinlupa"
-];
-
 export const landTitleSchema = z.object({
-  owner_name: z.string().min(1, "Owner Name is required"),
-
-  contactNo: z.string().regex(/^\d+$/, "Contact No. must be numeric"),
+  owner_name: z.string().min(1, "Owner name is required"),
+  contact_no: z
+    .string()
+    .min(7, "Contact number must be at least 7 digits")
+    .max(15, "Contact number too long"),
   address: z.string().min(1, "Address is required"),
+  email_address: z.string().email("Invalid email address"),
 
-  // Optional (auto-increment on backend)
-  titleNumber: z.string().optional(),
-  surveyNumber: z.string().optional(),
-
-  propertyLocation: z.enum(ncrCities, { message: "Select a valid NCR city" }),
-  lotNumber: z.coerce.number({ invalid_type_error: "Lot Number must be numeric" }),
-  areaSize: z.coerce.number({ invalid_type_error: "Area Size must be numeric" }),
-
-  classification: z.enum(["Residential", "Corporate", "Government Property"], {
-    message: "Select valid classification",
+  title_number: z.string().optional(), // auto-generated
+  property_location: z.enum([
+    "Manila", "Quezon City", "Caloocan", "Makati", "Pasig", "Taguig",
+    "Mandaluyong", "Pasay", "Parañaque", "Las Piñas", "Muntinlupa",
+    "Malabon", "Navotas", "Valenzuela", "San Juan", "Marikina", "Pateros"
+  ], {
+    required_error: "Property location is required",
   }),
 
-  registrationDate: z.string().refine(
-    (val) => {
-      const date = new Date(val);
-      return !isNaN(date) && date.getFullYear() >= 1800;
-    },
-    { message: "Date must be valid and year >= 1800" }
-  ),
+  lot_number: z.coerce.number().int().positive("Lot number must be a positive number"),
+  survey_number: z.string().optional(), // auto-generated
+  area_size: z.coerce.number().positive("Area size must be a positive number"),
 
-  registrarOffice: z.enum(ncrCities, { message: "Select a valid NCR city" }),
+  classification: z.enum(["Residential", "Corporate", "Government Property"], {
+    required_error: "Classification is required",
+  }),
 
-  previousTitleNumber: z
+  registration_date: z
     .string()
-    .regex(/^[a-zA-Z0-9-]+$/, "Must be alphanumeric"),
+    .refine(val => {
+      const date = new Date(val);
+      return !isNaN(date.getTime()) && date.getFullYear() >= 1900;
+    }, {
+      message: "Date must be after 1900",
+    }),
 
-  encumbrances: z.string().optional(),
+  registrar_office: z.enum([
+    "Manila", "Quezon City", "Caloocan", "Makati", "Pasig", "Taguig",
+    "Mandaluyong", "Pasay", "Parañaque", "Las Piñas", "Muntinlupa",
+    "Malabon", "Navotas", "Valenzuela", "San Juan", "Marikina", "Pateros"
+  ], {
+    required_error: "Registrar Office is required",
+  }),
 
-  status: z.string().min(1, "Status is required"),
+  previous_title_number: z.string().min(1, "Previous title number is required"),
+  encumbrances: z.string().min(1, "Encumbrances are required"),
+  status: z.enum(["Active", "Cancelled", "Pending", "Under Investigation"]),
 
-  attachments: z
-    .any()
-    .refine((files) => files?.length <= 5, "Maximum of 5 attachments only"),
+  attachments: z.any().optional(), // handled by multer
 });

@@ -1,5 +1,15 @@
 'use client';
-import { Drawer, List, ListItem, ListItemIcon, ListItemText, Toolbar } from '@mui/material';
+
+import {
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Toolbar,
+} from '@mui/material';
+
 import HomeIcon from '@mui/icons-material/Home';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
@@ -27,51 +37,63 @@ const Sidebar = () => {
       <Toolbar />
       <List>
         {/* ✅ Home */}
-        <ListItem button component={Link} href="/">
-          <ListItemIcon>
-            <HomeIcon />
-          </ListItemIcon>
-          <ListItemText primary="Home" />
+        <ListItem disablePadding>
+          <ListItemButton component={Link} href="/">
+            <ListItemIcon>
+              <HomeIcon />
+            </ListItemIcon>
+            <ListItemText primary="Home" />
+          </ListItemButton>
         </ListItem>
 
         {/* ✅ Register */}
-        <ListItem button component={Link} href="/register">
-          <ListItemIcon>
-            <DescriptionIcon />
-          </ListItemIcon>
-          <ListItemText primary="Register" />
+        <ListItem disablePadding>
+          <ListItemButton component={Link} href="/register">
+            <ListItemIcon>
+              <DescriptionIcon />
+            </ListItemIcon>
+            <ListItemText primary="Register" />
+          </ListItemButton>
         </ListItem>
 
         {/* ✅ Transfer */}
-        <ListItem button component={Link} href="/transfer">
-          <ListItemIcon>
-            <CompareArrowsIcon />
-          </ListItemIcon>
-          <ListItemText primary="Transfer" />
+        <ListItem disablePadding>
+          <ListItemButton component={Link} href="/transfer">
+            <ListItemIcon>
+              <CompareArrowsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Transfer" />
+          </ListItemButton>
         </ListItem>
 
         {/* ✅ Mortgage */}
-        <ListItem button component={Link} href="/mortgage">
-          <ListItemIcon>
-            <HomeWorkIcon />
-          </ListItemIcon>
-          <ListItemText primary="Mortgage" />
+        <ListItem disablePadding>
+          <ListItemButton component={Link} href="/mortgage">
+            <ListItemIcon>
+              <HomeWorkIcon />
+            </ListItemIcon>
+            <ListItemText primary="Mortgage" />
+          </ListItemButton>
         </ListItem>
 
         {/* ✅ Payments */}
-        <ListItem button component={Link} href="/payments">
-          <ListItemIcon>
-            <PaymentsIcon />
-          </ListItemIcon>
-          <ListItemText primary="Payments" />
+        <ListItem disablePadding>
+          <ListItemButton component={Link} href="/payments">
+            <ListItemIcon>
+              <PaymentsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Payments" />
+          </ListItemButton>
         </ListItem>
 
         {/* ✅ Approvals */}
-        <ListItem button component={Link} href="/approvals">
-          <ListItemIcon>
-            <GavelIcon />
-          </ListItemIcon>
-          <ListItemText primary="Approvals" />
+        <ListItem disablePadding>
+          <ListItemButton component={Link} href="/approvals">
+            <ListItemIcon>
+              <GavelIcon />
+            </ListItemIcon>
+            <ListItemText primary="Approvals" />
+          </ListItemButton>
         </ListItem>
       </List>
     </Drawer>

@@ -7,6 +7,7 @@ const multer = require("multer");
 const storage = multer.memoryStorage();
 const upload = multer({ storage: multer.memoryStorage() });
 const { landTitleSchema } = require('./zod-schemas');
+const z = require('zod');
 
 
 
@@ -114,13 +115,13 @@ const payload = {
     console.log(`[✅ SUCCESS] Forwarded to lambda-producer-service: ${response.status}`);
     res.status(response.status).json(response.data);
   } catch (err) {
-    if (err.name === "ZodError") {
-      console.error(`[❌ ZOD VALIDATION ERROR]`, err.errors);
-      return res.status(400).json({
-        error: "Validation failed",
-        details: err.errors,
-      });
-    }
+if (err instanceof z.ZodError) {
+  console.error(`[❌ ZOD VALIDATION ERROR]`, err.errors);
+  return res.status(400).json({
+    error: "Validation failed",
+    details: err.errors,
+  });
+}
 
     console.error(`[❌ ERROR] Forwarding failed: ${err.message}`);
     res.status(500).json({ error: 'Proxy error', message: err.message });

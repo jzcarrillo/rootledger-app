@@ -2,6 +2,7 @@ const express = require('express');
 const amqp = require('amqplib');
 const cors = require('cors');
 const multer = require('multer');
+const { landTitleSchema } = require('./zod-schemas');
 
 const storage = multer.memoryStorage(); // store files in memory (you can stream to S3, etc.)
 const upload = multer({ storage });
@@ -58,15 +59,19 @@ async function connectRabbitMQ(retries = 10) {
         reconnectRabbitMQ();
       });
 
-      return;
-    } catch (err) {
-      console.error(`[✗] RabbitMQ connect failed: ${err.message}. Retrying in 3s...`);
-      retries--;
-      await new Promise(res => setTimeout(res, 3000));
-    }
+      return;  // <-- End of try block
+      
+    } 
+
+      catch (err) {
+  console.error(`[✗] RabbitMQ connect failed:`, err.name, err.message, err.stack);
+  retries--;
+  await new Promise(res => setTimeout(res, 3000));
+}
   }
   console.error('[✗] Failed to connect to RabbitMQ after retries.');
 }
+
 
 function reconnectRabbitMQ() {
   if (isReconnecting) return;
@@ -85,6 +90,8 @@ app.listen(PORT, '0.0.0.0', () => {
 
 connectRabbitMQ();
 
+
+
 /**
  * POST /register
  * Queues entire request body to RabbitMQ
@@ -96,25 +103,35 @@ app.post('/register', upload.fields([{ name: 'attachments', maxCount: 5 }]), asy
   console.log('[DEBUG] Received fields:', Object.keys(fields));
   console.log('[DEBUG] Received files count:', files.length);
 
-  const data = {
-    ...fields,
-    attachments: files.map(file => ({
-      originalname: file.originalname,
-      mimetype: file.mimetype,
-      buffer: file.buffer.toString('base64'),
-    }))
-  };
-
   try {
-if (!channel || !channel.connection || channel.connection.stream?.destroyed) {
-  console.error('[✗] RabbitMQ channel not ready or connection closed');
-  console.log('[DEBUG] channel:', !!channel);
-  console.log('[DEBUG] channel.connection:', !!channel?.connection);
-  console.log('[DEBUG] channel.connection.stream.destroyed:', channel?.connection?.stream?.destroyed);
-  return res.status(503).send('RabbitMQ not ready');
-}
+const parsedInput = {
+  ...fields,
+  lot_number: Number(fields.lot_number),
+  area_size: Number(fields.area_size),
+  registration_date: fields.registration_date,
+  previous_title_number: fields.previous_title_number || '',
+  encumbrances: fields.encumbrances || '',
+  attachments: files.map(file => ({
+    originalname: file.originalname,
+    mimetype: file.mimetype,
+    buffer: file.buffer.toString('base64'),
+  })),
+};
 
-    const payload = Buffer.from(JSON.stringify(data));
+    // ✅ Zod validation
+    const validatedPayload = landTitleSchema.parse(parsedInput);
+
+
+
+    if (!channel || !channel.connection || channel.connection.stream?.destroyed) {
+      console.error('[✗] RabbitMQ channel not ready or connection closed');
+      console.log('[DEBUG] channel:', !!channel);
+      console.log('[DEBUG] channel.connection:', !!channel?.connection);
+      console.log('[DEBUG] channel.connection.stream.destroyed:', channel?.connection?.stream?.destroyed);
+      return res.status(503).send('RabbitMQ not ready');
+    }
+
+    const payload = Buffer.from(JSON.stringify(parsedInput));
     channel.sendToQueue(QUEUE, payload, { persistent: true });
 
     console.log(`[→] Published to ${QUEUE}:`, {
@@ -123,10 +140,16 @@ if (!channel || !channel.connection || channel.connection.stream?.destroyed) {
     });
 
     res.status(200).json({ message: '✅ Message queued' });
+
   } catch (err) {
-    console.error('[✗] Failed to queue message:', err.message);
+    if (err.name === "ZodError") {
+      console.error("[Zod ❌]", err.errors); // ✅ Log specific validation issues
+      return res.status(400).json({ errors: err.errors });
+    }
+
+    console.error('[✗] Unexpected error occurred:', err); // ✅ Log full object instead of err.message
     res.status(500).send('Internal Server Error');
-  }
+  }// ← This is the closing } that was probably missing
 });
 
 app.get('/', (req, res) => {

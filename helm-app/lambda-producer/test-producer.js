@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Config
-const TOTAL_REQUESTS = 1000;
+const TOTAL_REQUESTS = 20000;
 const CONCURRENCY = 10;
 const PRODUCER_URL = 'http://localhost:4000/register'; // Change if different
 

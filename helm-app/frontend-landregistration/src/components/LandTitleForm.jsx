@@ -13,21 +13,21 @@ import * as z from "zod";
 
 // Zod schema
 const landTitleSchema = z.object({
-  owner_name: z.string().min(1, "Owner name is required"),
-  contact_no: z.string().min(1, "Contact number is required"),
-  address: z.string().min(1, "Address is required"),
+  owner_name: z.string().nonempty("Owner name is required"),
+  contact_no: z.string().nonempty("Contact number is required"),
+  address: z.string().nonempty("Address is required"),
   email_address: z.string().email("Invalid email address"),
-  property_location: z.string().min(1, "Property location is required"),
-  lot_number: z.string().min(1, "Lot number is required"),
-  area_size: z.string().min(1, "Area size is required"),
+  property_location: z.string().nonempty("Property location is required"),
+  lot_number: z.string().nonempty("Lot number is required"),
+  area_size: z.string().nonempty("Area size is required"),
   classification: z.enum(["Residential", "Corporate", "Government Property"]),
   registration_date: z.string().refine((date) => {
     const d = new Date(date);
     return d.getFullYear() > 1900;
   }, { message: "Date must be after 1900" }),
-  registrar_office: z.string().min(1, "Registrar office is required"),
-  previous_title_number: z.string().optional(),
-  encumbrances: z.string().optional(),
+  registrar_office: z.string().nonempty("Registrar office is required"),
+  previous_title_number: z.string().nonempty("Previous Title number is required"),
+  encumbrances: z.string().nonempty("Previous Title number is required"),
   status: z.enum(["Active", "Cancelled", "Pending", "Under Investigation"]),
   attachments: z.any().optional(),
 });
@@ -46,41 +46,49 @@ export default function LandTitleForm() {
     control,
     handleSubmit,
     setValue,
+    reset,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(landTitleSchema),
   });
 
   const onSubmit = async (data) => {
-    const formData = new FormData();
-    for (const key in data) {
-      if (key === "attachments" && data.attachments?.length > 0) {
-        for (let i = 0; i < data.attachments.length; i++) {
-          formData.append("attachments", data.attachments[i]);
-        }
-      } else {
-        formData.append(key, data[key]);
-      }
-    }
-
-    formData.append("title_number", titleNumber);
-    formData.append("survey_number", surveyNumber);
-
     try {
-      await axios.post("http://localhost:30081/land/register", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const formData = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        if (key === 'attachments' && Array.isArray(value)) {
+          Array.from(value).forEach((file) => formData.append('attachments', file));
+        } else {
+          formData.append(key, value);
+        }
       });
-      alert("Land title registered successfully!");
+
+      const response = await axios.post(
+        'http://localhost:30081/land/register',
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        }
+      );
+
+      if (response.status === 200 || response.status === 201) {
+        alert('Land title registered successfully!');
+        window.location.reload(); // refresh page after success
+      } else {
+        console.error("Unexpected response:", response);
+        alert('Submission failed. Unexpected server response.');
+      }
+
     } catch (error) {
-      console.error("Submission failed:", error);
-      alert("Submission failed. Check console for details.");
+      console.error('❌ Submission failed:', error);
+      alert('Submission failed. Check console for details.');
     }
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} encType="multipart/form-data">
       <Typography variant="h5" gutterBottom>
-        📝 Owner Information
+        Owner Information
       </Typography>
 
       <Controller
@@ -127,7 +135,7 @@ export default function LandTitleForm() {
         )}
       />
 
-      <Typography variant="h6" mt={4}>📄 Land Title Information</Typography>
+      <Typography variant="h6" mt={4}>Land Title Information</Typography>
 
       <TextField
         fullWidth
@@ -265,7 +273,7 @@ export default function LandTitleForm() {
         )}
       />
 
-      <Typography variant="h6" mt={4}>📎 Attachments</Typography>
+      <Typography variant="h6" mt={4}>Attachments</Typography>
       <Box mb={2}>
         <input
           type="file"

@@ -6,14 +6,14 @@ const { Client } = require('pg');
 const app = express();
 const PORT = 3000;
 
-// Parse JSON body
+// Middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Redis client
+// Redis Client
 const redis = new Redis({ host: 'redis', port: 6379 });
 
-// PostgreSQL client
+// PostgreSQL Client
 const pgClient = new Client({
   host: 'postgres-landregistry',
   port: 5432,
@@ -26,7 +26,8 @@ pgClient.connect()
   .then(() => console.log('[✓] Connected to PostgreSQL'))
   .catch(err => console.error('[✗] PostgreSQL connection error:', err.message));
 
-// Redis: Set a key
+// ───────────────────────────────────────────────
+// Redis Test Routes (Optional)
 app.get('/set', async (req, res) => {
   try {
     await redis.set('mykey', 'Hello from Redis!');
@@ -37,7 +38,6 @@ app.get('/set', async (req, res) => {
   }
 });
 
-// Redis: Get a key
 app.get('/get', async (req, res) => {
   try {
     const value = await redis.get('mykey');
@@ -47,21 +47,34 @@ app.get('/get', async (req, res) => {
     res.status(500).send('Redis error');
   }
 });
+// ───────────────────────────────────────────────
 
-// PostgreSQL test route
-app.get('/dbtest', async (req, res) => {
-  try {
-    await pgClient.query(`CREATE TABLE IF NOT EXISTS land_titles (id SERIAL PRIMARY KEY, message TEXT)`);
-    await pgClient.query(`INSERT INTO land_titles (message) VALUES ('Hello from PostgreSQL!')`);
-    const result = await pgClient.query(`SELECT * FROM land_titles`);
-    res.json(result.rows);
-  } catch (err) {
-    console.error('[✗] PostgreSQL error:', err.message);
-    res.status(500).send('PostgreSQL error');
-  }
-});
+// PostgreSQL Table Init (run once)
+const initTable = async () => {
+  await pgClient.query(`
+    CREATE TABLE IF NOT EXISTS land_titles (
+      id SERIAL PRIMARY KEY,
+      owner_name VARCHAR(255),
+      contact_no VARCHAR(20),
+      address TEXT,
+      property_location VARCHAR(100),
+      lot_number INT,
+      survey_number SERIAL,
+      area_size NUMERIC,
+      classification VARCHAR(50),
+      registration_date DATE,
+      registrar_office VARCHAR(100),
+      previous_title_number VARCHAR(100),
+      encumbrances TEXT,
+      status VARCHAR(50) DEFAULT 'Active',
+      attachments JSONB,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  console.log('[✓] PostgreSQL table initialized');
+};
 
-// Lambda Consumer POST endpoint
+// Process Payload and Insert to DB
 app.post('/process', async (req, res) => {
   const payload = req.body;
 
@@ -69,11 +82,51 @@ app.post('/process', async (req, res) => {
     return res.status(400).json({ message: '❌ Empty or invalid payload' });
   }
 
+  const {
+    owner_name,
+    contactNo,
+    address,
+    propertyLocation,
+    lotNumber,
+    areaSize,
+    classification,
+    registrationDate,
+    registrarOffice,
+    previousTitleNumber,
+    encumbrances,
+    attachments,
+  } = payload;
+
   try {
-    const message = JSON.stringify(payload);
-    await pgClient.query(`CREATE TABLE IF NOT EXISTS land_titles (id SERIAL PRIMARY KEY, message TEXT)`);
-    await pgClient.query(`INSERT INTO land_titles (message) VALUES ($1)`, [message]);
-    console.log('[✓] Message inserted into PostgreSQL from Lambda Consumer:', payload);
+    const insertQuery = `
+      INSERT INTO land_titles (
+        owner_name, contact_no, address, property_location, lot_number,
+        area_size, classification, registration_date, registrar_office,
+        previous_title_number, encumbrances, attachments
+      ) VALUES (
+        $1, $2, $3, $4, $5,
+        $6, $7, $8, $9,
+        $10, $11, $12
+      )
+    `;
+
+    const values = [
+      owner_name,
+      contactNo,
+      address,
+      propertyLocation,
+      lotNumber,
+      areaSize,
+      classification,
+      registrationDate,
+      registrarOffice,
+      previousTitleNumber,
+      encumbrances,
+      JSON.stringify(attachments || []),
+    ];
+
+    await pgClient.query(insertQuery, values);
+    console.log('[✓] Inserted structured payload into PostgreSQL:', payload);
     res.status(201).json({ message: '✅ Stored in DB' });
   } catch (err) {
     console.error('[✗] Failed to insert into DB:', err.message);
@@ -81,53 +134,34 @@ app.post('/process', async (req, res) => {
   }
 });
 
-// ✅ Health Check Route
-app.get('/', async (req, res) => {
-  try {
-    await pgClient.query('SELECT 1'); // DB connectivity check
-    res.send(`
-      <html>
-        <head><title>Backend</title></head>
-        <body style="font-family:sans-serif; padding:20px;">
-          <h2 style="color:green;">✅ Backend is running and connected to PostgreSQL</h2>
-        </body>
-      </html>
-    `);
-  } catch (err) {
-    console.error('❌ DB Connection Error:', err.message);
-    res.status(500).send(`
-      <html>
-        <head><title>Backend</title></head>
-        <body style="font-family:sans-serif; padding:20px;">
-          <h2 style="color:red;">❌ Backend is running but cannot connect to PostgreSQL</h2>
-        </body>
-      </html>
-    `);
-  }
-});
-
-// Start Express server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Backend listening on port ${PORT}`);
-});
-
-// 🔍 Fetch all submitted messages from test_table
+// Logs Reader: Return All Records
 app.get('/logs', async (req, res) => {
   try {
-    const result = await pgClient.query(`SELECT id, message FROM land_titles ORDER BY id DESC`);
-    
-    // Parse JSON strings into real objects if possible
-    const rows = result.rows.map(row => {
-      try {
-        return { id: row.id, ...JSON.parse(row.message) };
-      } catch {
-        return { id: row.id, message: row.message };
-      }
-    });
-
-    res.json(rows);
+    const result = await pgClient.query(`SELECT * FROM land_titles ORDER BY id DESC`);
+    res.json(result.rows);
   } catch (err) {
     console.error('[✗] Failed to fetch from DB:', err.message);
-    res.status(500).json({ error: 'Failed to fetch data' });
+    res.status(500).json({ error: '❌ Failed to fetch data' });
   }
+});
+
+// Health Check
+app.get('/', async (req, res) => {
+  try {
+    await pgClient.query('SELECT 1');
+    res.send(`
+      <html><body><h2 style="color:green;">✅ Backend is connected to PostgreSQL</h2></body></html>
+    `);
+  } catch (err) {
+    console.error('❌ DB Error:', err.message);
+    res.status(500).send(`
+      <html><body><h2 style="color:red;">❌ Cannot connect to PostgreSQL</h2></body></html>
+    `);
+  }
+});
+
+// Start Server
+app.listen(PORT, '0.0.0.0', async () => {
+  await initTable();
+  console.log(`🚀 Backend listening on port ${PORT}`);
 });

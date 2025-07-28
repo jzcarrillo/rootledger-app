@@ -62,7 +62,7 @@ const submitLimiter = rateLimit({
   max: 100,
   handler: (req, res) => {
     throttledRequests.inc({ route: '/submit' });
-    res.status(429).json({ message: 'Too many requests to /submit' });
+    res.status(429).json({ message: 'Too many requests to /land/register' });
   },
 });
 

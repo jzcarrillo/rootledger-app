@@ -1,8 +1,9 @@
 const amqp = require('amqplib');
 const express = require('express');
 const axios = require('axios');
+const { landTitleSchema } = require('./zod-schemas'); // ✅ Import Zod schema
 
-const QUEUE = 'queue_land.registry'; // match producer queue
+const QUEUE = 'queue_land.registry';
 const RABBITMQ_URL = 'amqp://myuser:mypass@rabbitmq-landregistry';
 const BACKEND_URL = 'http://backend-landregistry.helm-app.svc.cluster.local:3000/process';
 const PORT = 4001;
@@ -28,20 +29,33 @@ async function connectConsumer(retries = 10) {
 
       console.log('[✓] Connected to RabbitMQ and queue asserted');
 
-      // ✅ Start consuming and POST to backend
+      // ✅ Start consuming
       channel.consume(QUEUE, async (msg) => {
         if (msg !== null) {
           const content = msg.content.toString();
           console.log(`[←] Consumed message: ${content}`);
 
           try {
-            const payload = JSON.parse(content); // message must be valid JSON
-            const response = await axios.post(BACKEND_URL, payload);
+            const payload = JSON.parse(content);
+
+            // ✅ Validate with Zod before forwarding
+            const validated = landTitleSchema.parse(payload);
+
+            // ✅ Forward only if valid
+            const response = await axios.post(BACKEND_URL, validated);
             console.log(`[✓] Forwarded to backend. Status: ${response.status}`);
+
             channel.ack(msg);
           } catch (err) {
-            console.error('[✗] Failed to forward to backend:', err.message);
-            // Optionally: channel.nack(msg); to requeue
+            if (err.name === 'ZodError') {
+              // 🧼 Log schema validation errors
+              console.error('[✗] Zod validation error:', err.errors);
+            } else {
+              console.error('[✗] Failed to process/forward message:', err.message);
+            }
+
+            // ❌ Reject the message without requeueing (you can change this to true if needed)
+            channel.nack(msg, false, false);
           }
         }
       });
@@ -60,7 +74,7 @@ async function connectConsumer(retries = 10) {
 
 connectConsumer();
 
-// ✅ Health check endpoint
+// ✅ Express health check
 const app = express();
 
 app.get('/health', (req, res) => {

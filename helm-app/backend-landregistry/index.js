@@ -2,6 +2,7 @@ const express = require('express');
 const amqp = require('amqplib');
 const Redis = require('ioredis');
 const { Client } = require('pg');
+const { landTitleSchema } = require('./zod-schemas');
 
 const app = express();
 const PORT = 3000;
@@ -56,6 +57,7 @@ const initTable = async () => {
       id SERIAL PRIMARY KEY,
       owner_name VARCHAR(255),
       contact_no VARCHAR(20),
+      title_number SERIAL,
       address TEXT,
       property_location VARCHAR(100),
       lot_number INT,
@@ -82,6 +84,18 @@ app.post('/process', async (req, res) => {
     return res.status(400).json({ message: '❌ Empty or invalid payload' });
   }
 
+    // ✅ Validate with Zod
+  const parsed = landTitleSchema.safeParse(payload);
+  if (!parsed.success) {
+    console.error('[✗] Zod validation failed:', parsed.error.format());
+    return res.status(400).json({
+      message: '❌ Zod validation failed',
+      errors: parsed.error.format(),
+    });
+  }
+
+  const data = parsed.data;
+
   const {
     owner_name,
     contactNo,
@@ -95,7 +109,7 @@ app.post('/process', async (req, res) => {
     previousTitleNumber,
     encumbrances,
     attachments,
-  } = payload;
+  } = data;
 
   try {
     const insertQuery = `

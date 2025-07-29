@@ -63,6 +63,10 @@ export default function LandTitleForm() {
         }
       });
 
+          // 🛠️ Add missing fields manually
+    formData.append("title_number", titleNumber);
+    formData.append("survey_number", surveyNumber);
+
       const response = await axios.post(
         'http://localhost:30081/land/register',
         formData,

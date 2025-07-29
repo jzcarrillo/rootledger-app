@@ -292,6 +292,11 @@ $portForwardAlertmanager = Start-Process -FilePath "kubectl" `
   -ArgumentList "port-forward", "svc/grafana", "3000:32000", "-n", "helm-app" `
   -NoNewWindow -PassThru    
 
+Write-Host "Port-forwarding postgres-landregistry on port 5432..."
+$portForwardAlertmanager = Start-Process -FilePath "kubectl" `
+  -ArgumentList "port-forward", "svc/postgres-landregistry", "5432:5432", "-n", "helm-app" `
+  -NoNewWindow -PassThru     
+
 # Wait a moment to ensure port-forwards are established
 Start-Sleep -Seconds 3
 

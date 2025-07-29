@@ -392,7 +392,7 @@ if (-not $lambdaProducerPod) {
 # Step 10: Show logs of RabbitMQ
 Write-Info "Getting logs from RabbitMQ pod..."
 
-$rabbitmqPod = kubectl get pods -n $Namespace -l app=rabbitmq -o jsonpath="{.items[0].metadata.name}"
+$rabbitmqPod = kubectl get pods -n $Namespace -l app=rabbitmq-landregistry -o jsonpath="{.items[0].metadata.name}"
 
 if (-not $rabbitmqPod) {
     Write-Warn "No RabbitMQ pod found."

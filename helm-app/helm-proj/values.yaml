@@ -222,7 +222,7 @@ prometheus:
     enabled: true
     clusterRoleName: prometheus-cluster-role
     clusterRoleBindingName: prometheus-cluster-rolebinding
-    createClusterRole: false
+    createClusterRole: true
 
   service:
     type: NodePort

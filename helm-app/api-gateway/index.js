@@ -3,19 +3,17 @@ const rateLimit = require('express-rate-limit');
 const client = require('prom-client');
 const axios = require('axios');
 const os = require('os');
-const multer = require("multer");
-const storage = multer.memoryStorage();
-const upload = multer({ storage: multer.memoryStorage() });
+const multer = require('multer');
+const FormData = require('form-data');
 const { landTitleSchema } = require('./zod-schemas');
 const z = require('zod');
 
-
-
+// === Setup Express ===
 const app = express();
 const PORT = 8081;
 const FRONTEND = 'http://localhost:4005';
 
-// === Metrics ===
+// === Metrics setup ===
 const register = new client.Registry();
 client.collectDefaultMetrics({ register });
 
@@ -36,6 +34,7 @@ register.registerMetric(throttledRequests);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// === CORS setup ===
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', FRONTEND);
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -43,20 +42,25 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
+
+// === Request counter ===
 app.use((req, res, next) => {
   totalRequests.inc({ route: req.path, method: req.method });
   next();
 });
 
-// === Health and metrics
+// === Health and Metrics routes ===
 app.get('/', (req, res) => res.send(`✅ API Gateway UP - Served by pod: ${os.hostname()}`));
-
 app.get('/metrics', async (req, res) => {
   res.set('Content-Type', register.contentType);
   res.end(await register.metrics());
 });
 
-// === Rate limiter
+// === Multer for file handling ===
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+// === Rate Limiter ===
 const submitLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 100,
@@ -66,70 +70,76 @@ const submitLimiter = rateLimit({
   },
 });
 
-// === POST /submit forwarding to lambda-producer-service
-app.post('/land/register', submitLimiter, upload.array('attachments'), async (req, res) => {
+// === Main POST endpoint ===
+app.post('/land/register', submitLimiter, upload.array('attachments', 5), async (req, res) => {
   console.log(`[LOG] Incoming POST request to /land/register from ${os.hostname()}`);
 
   try {
     const attachments = req.files || [];
     const formFields = req.body;
 
-const payload = {
-  owner_name: formFields.owner_name,
-  contact_no: formFields.contact_no,
-  address: formFields.address,
-  email_address: formFields.email_address,
-  title_number: formFields.title_number,
-  survey_number: formFields.survey_number,
-  property_location: formFields.property_location,
-  lot_number: Number(formFields.lot_number),
-  area_size: formFields.area_size ? Number(formFields.area_size) : null,
-  classification: formFields.classification,
-  registration_date: formFields.registration_date,
-  registrar_office: formFields.registrar_office,
-  previous_title_number: formFields.previous_title_number,
-  encumbrances: formFields.encumbrances,
-  status: formFields.status || "Pending",
-  attachments: attachments.map(file => ({
-    originalname: file.originalname,
-    mimetype: file.mimetype,
-    buffer: file.buffer.toString('base64'),
-  })),
-};
+    const payload = {
+      owner_name: formFields.owner_name,
+      contact_no: formFields.contact_no,
+      address: formFields.address,
+      email_address: formFields.email_address,
+      title_number: formFields.title_number,
+      survey_number: formFields.survey_number,
+      property_location: formFields.property_location,
+      lot_number: Number(formFields.lot_number),
+      area_size: formFields.area_size ? Number(formFields.area_size) : null,
+      classification: formFields.classification,
+      registration_date: formFields.registration_date,
+      registrar_office: formFields.registrar_office,
+      previous_title_number: formFields.previous_title_number,
+      encumbrances: formFields.encumbrances,
+      status: formFields.status || "Pending",
+      attachments: attachments.map(file => ({
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        filename: file.originalname,
+        size: file.size,
+        buffer: file.buffer.toString('base64'),
+      })),
+    };
 
-    // ✅ Zod validation
     const validatedPayload = landTitleSchema.parse(payload);
 
-    // ✅ Forward to lambda-producer
+    const formData = new FormData();
+    formData.append('payload', JSON.stringify(validatedPayload));
+
+    attachments.forEach((file, index) => {
+      if (!file?.buffer) return;
+      formData.append('attachments', file.buffer, {
+        filename: file.originalname || `file-${index}`,
+        contentType: file.mimetype || 'application/octet-stream',
+      });
+    });
+
     const response = await axios.post(
       'http://lambda-producer:4000/register',
-      validatedPayload,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        timeout: 5000,
-      }
+      formData,
+      { headers: formData.getHeaders(), timeout: 5000 }
     );
 
     console.log(`[✅ SUCCESS] Forwarded to lambda-producer-service: ${response.status}`);
     res.status(response.status).json(response.data);
-  } catch (err) {
-if (err instanceof z.ZodError) {
-  console.error(`[❌ ZOD VALIDATION ERROR]`, err.errors);
-  return res.status(400).json({
-    error: "Validation failed",
-    details: err.errors,
-  });
-}
 
-    console.error(`[❌ ERROR] Forwarding failed: ${err.message}`);
-    res.status(500).json({ error: 'Proxy error', message: err.message });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      console.error(`[❌ ZOD VALIDATION ERROR]`, err.errors);
+      return res.status(400).json({
+        error: "Validation failed",
+        details: err.errors,
+      });
+    }
+
+    console.error("❌ Unexpected error:", err.message || err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
-
-// === Start server
+// === Start server ===
 app.listen(PORT, '0.0.0.0', () => {
   console.log(` API Gateway running on port ${PORT}`);
 });

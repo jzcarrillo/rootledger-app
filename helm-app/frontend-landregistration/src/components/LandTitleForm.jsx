@@ -52,42 +52,47 @@ export default function LandTitleForm() {
     resolver: zodResolver(landTitleSchema),
   });
 
-  const onSubmit = async (data) => {
-    try {
-      const formData = new FormData();
-      Object.entries(data).forEach(([key, value]) => {
-        if (key === 'attachments' && Array.isArray(value)) {
-          Array.from(value).forEach((file) => formData.append('attachments', file));
-        } else {
-          formData.append(key, value);
-        }
-      });
+const onSubmit = async (data) => {
+  try {
+    const formData = new FormData();
 
-          // 🛠️ Add missing fields manually
-    formData.append("title_number", titleNumber);
-    formData.append("survey_number", surveyNumber);
+    // Extract attachments
+    const attachments = data.attachments || [];
 
-      const response = await axios.post(
-        'http://localhost:30081/land/register',
-        formData,
-        {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        }
-      );
+    // Remove attachments from payload
+    const { attachments: _, ...payload } = data;
 
-      if (response.status === 200 || response.status === 201) {
-        alert('Land title registered successfully!');
-        window.location.reload(); // refresh page after success
-      } else {
-        console.error("Unexpected response:", response);
-        alert('Submission failed. Unexpected server response.');
-      }
-
-    } catch (error) {
-      console.error('❌ Submission failed:', error);
-      alert('Submission failed. Check console for details.');
+    // ⚠️ Ensure auto-generated fields are still included if needed
+    if (!payload.title_number) {
+      payload.title_number = generateTitleNumber(); // Or whatever function/state you're using
     }
-  };
+    if (!payload.survey_number) {
+      payload.survey_number = generateSurveyNumber();
+    }
+
+    // Append JSON stringified payload
+    formData.append("payload", JSON.stringify(payload));
+
+    // Append files only once
+    attachments.forEach((file) => {
+      formData.append("attachments", file);
+    });
+
+    const response = await axios.post(
+      "http://localhost:30081/land/register",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    console.log("✅ Submitted:", response.data);
+  } catch (error) {
+    console.error("❌ Submission failed:", error.response?.data || error.message);
+  }
+};
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} encType="multipart/form-data">
@@ -105,6 +110,38 @@ export default function LandTitleForm() {
           />
         )}
       />
+
+<Controller
+  name="title_number"
+  control={control}
+  defaultValue={titleNumber}
+  render={({ field }) => (
+    <TextField
+      fullWidth
+      margin="normal"
+      label="Title Number (Auto-generated)"
+      {...field}
+      value={field.value}
+      disabled
+    />
+  )}
+/>
+
+<Controller
+  name="survey_number"
+  control={control}
+  defaultValue={surveyNumber}
+  render={({ field }) => (
+    <TextField
+      fullWidth
+      margin="normal"
+      label="Survey Number (Auto-generated)"
+      {...field}
+      value={field.value}
+      disabled
+    />
+  )}
+/>
 
       <Controller
         name="contact_no"
@@ -280,6 +317,7 @@ export default function LandTitleForm() {
       <Typography variant="h6" mt={4}>Attachments</Typography>
       <Box mb={2}>
         <input
+          name="attachments" 
           type="file"
           accept="application/pdf,image/*"
           multiple

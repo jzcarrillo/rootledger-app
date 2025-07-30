@@ -2,6 +2,11 @@ const amqp = require('amqplib');
 const express = require('express');
 const axios = require('axios');
 const { landTitleSchema } = require('./zod-schemas'); // ✅ Import Zod schema
+const FormData = require('form-data');
+const multer = require('multer');
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
 
 const QUEUE = 'queue_land.registry';
 const RABBITMQ_URL = 'amqp://myuser:mypass@rabbitmq-landregistry';
@@ -41,15 +46,35 @@ async function connectConsumer(retries = 10) {
             // ✅ Validate with Zod before forwarding
             const validated = landTitleSchema.parse(payload);
 
-            // ✅ Forward only if valid
-            const response = await axios.post(BACKEND_URL, validated);
-            console.log(`[✓] Forwarded to backend. Status: ${response.status}`);
+            // 🧪 DEBUG: Log attachment filenames
+console.log('[✔] Attachments from queue:', validated.attachments?.map(a => a.originalname));
+
+const formData = new FormData();
+formData.append('payload', JSON.stringify(validated)); // structured fields
+
+// Attach decoded files (if any)
+if (validated.attachments?.length > 0) {
+  validated.attachments.forEach((file, index) => {
+    const buffer = Buffer.from(file.buffer, 'base64');
+
+    formData.append('attachments', buffer, {
+      filename: file.filename || file.originalname || `file-${index}`,
+      contentType: file.mimetype || 'application/octet-stream',
+      knownLength: buffer.length,
+    });
+  });
+}
+
+const response = await axios.post(BACKEND_URL, formData, {
+  headers: formData.getHeaders(),
+});
+console.log(`[✓] Forwarded to backend as multipart. Status: ${response.status}`);
 
             channel.ack(msg);
           } catch (err) {
             if (err.name === 'ZodError') {
               // 🧼 Log schema validation errors
-              console.error('[✗] Zod validation error:', err.errors);
+              console.error('[✗] Zod validation error:', JSON.stringify(err.errors, null, 2));
             } else {
               console.error('[✗] Failed to process/forward message:', err.message);
             }

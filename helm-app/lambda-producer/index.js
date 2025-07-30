@@ -4,11 +4,12 @@ const cors = require('cors');
 const multer = require('multer');
 const { landTitleSchema } = require('./zod-schemas');
 
-const storage = multer.memoryStorage(); // store files in memory (you can stream to S3, etc.)
+const storage = multer.memoryStorage(); // Store files in memory
 const upload = multer({ storage });
 
 const app = express();
 
+// CORS Configuration
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'OPTIONS'],
@@ -16,10 +17,11 @@ app.use(cors({
 }));
 app.options('*', cors());
 
+// JSON and URL-encoded middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// ✅ Request logger
+// Request Logger
 app.use((req, res, next) => {
   console.log(`[REQ] ${req.method} ${req.url} - Body: ${JSON.stringify(req.body)}`);
   next();
@@ -32,9 +34,7 @@ let isReconnecting = false;
 const QUEUE = 'queue_land.registry';
 const RABBITMQ_URL = 'amqp://myuser:mypass@rabbitmq-landregistry';
 
-/**
- * Connect to RabbitMQ with retries and event listeners
- */
+// RabbitMQ Connection Logic with Auto-reconnect
 async function connectRabbitMQ(retries = 10) {
   while (retries) {
     try {
@@ -44,7 +44,7 @@ async function connectRabbitMQ(retries = 10) {
 
       console.log('[✓] Connected to RabbitMQ:', QUEUE);
 
-      // Auto-reconnect if closed
+      // Auto-reconnect on close
       connection.on('close', () => {
         console.warn('⚠️ RabbitMQ connection closed. Reconnecting...');
         reconnectRabbitMQ();
@@ -59,19 +59,16 @@ async function connectRabbitMQ(retries = 10) {
         reconnectRabbitMQ();
       });
 
-      return;  // <-- End of try block
-      
-    } 
+      return;
 
-      catch (err) {
-  console.error(`[✗] RabbitMQ connect failed:`, err.name, err.message, err.stack);
-  retries--;
-  await new Promise(res => setTimeout(res, 3000));
-}
+    } catch (err) {
+      console.error(`[✗] RabbitMQ connect failed:`, err.name, err.message, err.stack);
+      retries--;
+      await new Promise(res => setTimeout(res, 3000));
+    }
   }
   console.error('[✗] Failed to connect to RabbitMQ after retries.');
 }
-
 
 function reconnectRabbitMQ() {
   if (isReconnecting) return;
@@ -83,55 +80,52 @@ function reconnectRabbitMQ() {
   }, 3000);
 }
 
-const PORT = 4000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Lambda Producer running on port ${PORT}`);
-});
-
-connectRabbitMQ();
-
-
-
-/**
- * POST /register
- * Queues entire request body to RabbitMQ
- */
+// Main Register Endpoint
 app.post('/register', upload.fields([{ name: 'attachments', maxCount: 5 }]), async (req, res) => {
-  const fields = req.body;
+  let fields;
+
+  // 🔍 Parse payload JSON string
+  try {
+    fields = JSON.parse(req.body.payload);
+  } catch (err) {
+    console.error('[✗] Invalid JSON in payload:', err.message);
+    return res.status(400).json({ error: 'Invalid payload JSON' });
+  }
+
   const files = req.files?.attachments || [];
 
   console.log('[DEBUG] Received fields:', Object.keys(fields));
   console.log('[DEBUG] Received files count:', files.length);
 
   try {
-const parsedInput = {
-  ...fields,
-  lot_number: Number(fields.lot_number),
-  area_size: Number(fields.area_size),
-  registration_date: fields.registration_date,
-  previous_title_number: fields.previous_title_number || '',
-  encumbrances: fields.encumbrances || '',
-  attachments: files.map(file => ({
-    originalname: file.originalname,
-    mimetype: file.mimetype,
-    buffer: file.buffer.toString('base64'),
-  })),
-};
+    // 🧠 Prepare and transform data for validation
+    const parsedInput = {
+      ...fields,
+      lot_number: Number(fields.lot_number),
+      area_size: Number(fields.area_size),
+      registration_date: fields.registration_date,
+      previous_title_number: fields.previous_title_number || '',
+      encumbrances: fields.encumbrances || '',
+      attachments: files.map(file => ({
+        originalname: file.originalname,
+        filename: file.originalname,
+        size: file.size,
+        mimetype: file.mimetype,
+        buffer: file.buffer.toString('base64'),
+      })),
+    };
 
-    // ✅ Zod validation
+    // ✅ Validate using Zod
     const validatedPayload = landTitleSchema.parse(parsedInput);
 
-
-
+    // ✅ Check RabbitMQ channel state
     if (!channel || !channel.connection || channel.connection.stream?.destroyed) {
       console.error('[✗] RabbitMQ channel not ready or connection closed');
-      console.log('[DEBUG] channel:', !!channel);
-      console.log('[DEBUG] channel.connection:', !!channel?.connection);
-      console.log('[DEBUG] channel.connection.stream.destroyed:', channel?.connection?.stream?.destroyed);
       return res.status(503).send('RabbitMQ not ready');
     }
 
-    const payload = Buffer.from(JSON.stringify(parsedInput));
+    // 📨 Send to queue
+    const payload = Buffer.from(JSON.stringify(validatedPayload));
     channel.sendToQueue(QUEUE, payload, { persistent: true });
 
     console.log(`[→] Published to ${QUEUE}:`, {
@@ -143,15 +137,16 @@ const parsedInput = {
 
   } catch (err) {
     if (err.name === "ZodError") {
-      console.error("[Zod ❌]", err.errors); // ✅ Log specific validation issues
+      console.error("[Zod ❌]", err.errors);
       return res.status(400).json({ errors: err.errors });
     }
 
-    console.error('[✗] Unexpected error occurred:', err); // ✅ Log full object instead of err.message
+    console.error('[✗] Unexpected error occurred:', err);
     res.status(500).send('Internal Server Error');
-  }// ← This is the closing } that was probably missing
+  }
 });
 
+// Basic homepage
 app.get('/', (req, res) => {
   res.send(`
     <html>
@@ -162,3 +157,12 @@ app.get('/', (req, res) => {
     </html>
   `);
 });
+
+// Start Express server
+const PORT = 4000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Lambda Producer running on port ${PORT}`);
+});
+
+// Start RabbitMQ connection
+connectRabbitMQ();

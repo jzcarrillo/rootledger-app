@@ -3,6 +3,8 @@ const amqp = require('amqplib');
 const Redis = require('ioredis');
 const { Client } = require('pg');
 const { landTitleSchema } = require('./zod-schemas');
+const multer = require('multer'); 
+const upload = multer({ dest: 'uploads/' });
 
 const app = express();
 const PORT = 3000;
@@ -69,22 +71,38 @@ const initTable = async () => {
       previous_title_number VARCHAR(100),
       encumbrances TEXT,
       status VARCHAR(50) DEFAULT 'Active',
-      attachments JSONB,
       created_at TIMESTAMP DEFAULT NOW()
     )
   `);
-  console.log('[✓] PostgreSQL table initialized');
-};
+
+await pgClient.query(`
+  CREATE TABLE IF NOT EXISTS documents (
+    id SERIAL PRIMARY KEY,
+    land_title_id INT REFERENCES land_titles(id) ON DELETE CASCADE,
+    originalname VARCHAR(255),
+    mimetype VARCHAR(100),
+    filename VARCHAR(255),
+    size INT,
+    url TEXT,
+    uploaded_at TIMESTAMP DEFAULT NOW()
+  )
+`);
+ };
+
+console.log('[✓] PostgreSQL table initialized');
 
 // Process Payload and Insert to DB
-app.post('/process', async (req, res) => {
-  const payload = req.body;
+app.post('/process', upload.array('attachments', 5), async (req, res) => {
+  const payload = JSON.parse(req.body.payload); // assuming form-data with 'payload'
+  const uploadedFiles = req.files;
+
+  // 🧪 DEBUG LOG: Check if attachments were received properly
+console.log('[✔] Files received:', uploadedFiles?.map(f => f.originalname));
 
   if (!payload || Object.keys(payload).length === 0) {
     return res.status(400).json({ message: '❌ Empty or invalid payload' });
   }
 
-    // ✅ Validate with Zod
   const parsed = landTitleSchema.safeParse(payload);
   if (!parsed.success) {
     console.error('[✗] Zod validation failed:', parsed.error.format());
@@ -107,46 +125,58 @@ app.post('/process', async (req, res) => {
     registration_date,
     registrar_office,
     previous_title_number,
-    encumbrances,
-    attachments,
-  } = data;
+    encumbrances
+  } = parsed.data;
+
+  const insertQuery = `
+    INSERT INTO land_titles (
+      owner_name, contact_no, address, property_location, lot_number,
+      area_size, classification, registration_date, registrar_office,
+      previous_title_number, encumbrances
+    ) VALUES (
+      $1, $2, $3, $4, $5,
+      $6, $7, $8, $9,
+      $10, $11
+    ) RETURNING id
+  `;
+
+  const values = [
+    owner_name, contact_no, address, property_location, lot_number,
+    area_size, classification, registration_date, registrar_office,
+    previous_title_number, encumbrances
+  ];
 
   try {
-    const insertQuery = `
-      INSERT INTO land_titles (
-        owner_name, contact_no, address, property_location, lot_number,
-        area_size, classification, registration_date, registrar_office,
-        previous_title_number, encumbrances, attachments
-      ) VALUES (
-        $1, $2, $3, $4, $5,
-        $6, $7, $8, $9,
-        $10, $11, $12
-      )
-    `;
+    const result = await pgClient.query(insertQuery, values);
+    const landTitleId = result.rows[0].id;
 
-    const values = [
-      owner_name,
-      contact_no,
-      address,
-      property_location,
-      lot_number,
-      area_size,
-      classification,
-      registration_date,
-      registrar_office,
-      previous_title_number,
-      encumbrances,
-      JSON.stringify(attachments || []),
-    ];
+    // Insert documents (attachments)
+    if (uploadedFiles?.length > 0) {
+      for (const file of uploadedFiles) {
+        await pgClient.query(
+          `INSERT INTO documents (
+            land_title_id, originalname, mimetype, filename, size, url
+          ) VALUES ($1, $2, $3, $4, $5, $6)`,
+          [
+            landTitleId,
+            file.originalname,
+            file.mimetype,
+            file.filename || file.originalname,
+            file.size || 0,
+            `/uploads/${file.filename || file.originalname}`
+          ]
+        );
+      }
+    }
 
-    await pgClient.query(insertQuery, values);
-    console.log('[✓] Inserted structured payload into PostgreSQL:', payload);
+    console.log('[✓] Inserted structured payload into PostgreSQL');
     res.status(201).json({ message: '✅ Stored in DB' });
   } catch (err) {
     console.error('[✗] Failed to insert into DB:', err.message);
     res.status(500).json({ message: '❌ PostgreSQL insert failed' });
   }
 });
+
 
 // Logs Reader: Return All Records
 app.get('/logs', async (req, res) => {

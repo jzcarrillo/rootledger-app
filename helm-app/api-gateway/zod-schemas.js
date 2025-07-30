@@ -15,8 +15,8 @@ const landTitleSchema = z.object({
   title_number: z.string().optional(), // will be auto-generated
   survey_number: z.string().optional(), // will be auto-generated
   property_location: z.enum(ncrCities, { required_error: "Select NCR city" }),
-  lot_number: z.number({ invalid_type_error: "Lot number must be a number" }),
-  area_size: z.number({ invalid_type_error: "Area size must be a number" }),
+  lot_number: z.coerce.number({ invalid_type_error: "Lot number must be a number" }),
+  area_size: z.coerce.number({ invalid_type_error: "Area size must be a number" }),
 
   classification: z.enum(["Residential", "Corporate", "Government Property"]),
   registration_date: z.string().refine((val) => {

@@ -30,6 +30,8 @@ const landTitleSchema = z.object({
   encumbrances: z.string().nonempty("Previous Title number is required"),
   status: z.enum(["Active", "Cancelled", "Pending", "Under Investigation"]),
   attachments: z.any().optional(),
+  title_number: z.string().nonempty(),
+  survey_number: z.string().nonempty(),
 });
 
 const ncrCities = [
@@ -50,49 +52,39 @@ export default function LandTitleForm() {
     formState: { errors },
   } = useForm({
     resolver: zodResolver(landTitleSchema),
+    defaultValues: {
+      title_number: titleNumber,
+      survey_number: surveyNumber,
+    }
   });
 
-const onSubmit = async (data) => {
-  try {
-    const formData = new FormData();
+  const onSubmit = async (data) => {
+    try {
+      const formData = new FormData();
 
-    // Extract attachments
-    const attachments = data.attachments || [];
+      const attachments = data.attachments || [];
+      const { attachments: _, ...payload } = data;
 
-    // Remove attachments from payload
-    const { attachments: _, ...payload } = data;
+      formData.append("payload", JSON.stringify(payload));
+      Array.from(attachments).forEach((file) => {
+        formData.append("attachments", file);
+      });
 
-    // ⚠️ Ensure auto-generated fields are still included if needed
-    if (!payload.title_number) {
-      payload.title_number = generateTitleNumber(); // Or whatever function/state you're using
+      const response = await axios.post(
+        "http://localhost:30081/land/register",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      console.log("✅ Submitted:", response.data);
+    } catch (error) {
+      console.error("❌ Submission failed:", error.response?.data || error.message);
     }
-    if (!payload.survey_number) {
-      payload.survey_number = generateSurveyNumber();
-    }
-
-    // Append JSON stringified payload
-    formData.append("payload", JSON.stringify(payload));
-
-    // Append files only once
-    attachments.forEach((file) => {
-      formData.append("attachments", file);
-    });
-
-    const response = await axios.post(
-      "http://localhost:30081/land/register",
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-
-    console.log("✅ Submitted:", response.data);
-  } catch (error) {
-    console.error("❌ Submission failed:", error.response?.data || error.message);
-  }
-};
+  };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} encType="multipart/form-data">
@@ -110,38 +102,6 @@ const onSubmit = async (data) => {
           />
         )}
       />
-
-<Controller
-  name="title_number"
-  control={control}
-  defaultValue={titleNumber}
-  render={({ field }) => (
-    <TextField
-      fullWidth
-      margin="normal"
-      label="Title Number (Auto-generated)"
-      {...field}
-      value={field.value}
-      disabled
-    />
-  )}
-/>
-
-<Controller
-  name="survey_number"
-  control={control}
-  defaultValue={surveyNumber}
-  render={({ field }) => (
-    <TextField
-      fullWidth
-      margin="normal"
-      label="Survey Number (Auto-generated)"
-      {...field}
-      value={field.value}
-      disabled
-    />
-  )}
-/>
 
       <Controller
         name="contact_no"
@@ -178,12 +138,19 @@ const onSubmit = async (data) => {
 
       <Typography variant="h6" mt={4}>Land Title Information</Typography>
 
-      <TextField
-        fullWidth
-        margin="normal"
-        label="Title Number (Auto-generated)"
-        value={titleNumber}
-        disabled
+      <Controller
+        name="title_number"
+        control={control}
+        render={({ field }) => (
+          <TextField
+            fullWidth
+            margin="normal"
+            label="Title Number (Auto-generated)"
+            {...field}
+            value={field.value}
+            disabled
+          />
+        )}
       />
 
       <Controller
@@ -212,12 +179,19 @@ const onSubmit = async (data) => {
         )}
       />
 
-      <TextField
-        fullWidth
-        margin="normal"
-        label="Survey Number (Auto-generated)"
-        value={surveyNumber}
-        disabled
+      <Controller
+        name="survey_number"
+        control={control}
+        render={({ field }) => (
+          <TextField
+            fullWidth
+            margin="normal"
+            label="Survey Number (Auto-generated)"
+            {...field}
+            value={field.value}
+            disabled
+          />
+        )}
       />
 
       <Controller
@@ -317,7 +291,7 @@ const onSubmit = async (data) => {
       <Typography variant="h6" mt={4}>Attachments</Typography>
       <Box mb={2}>
         <input
-          name="attachments" 
+          name="attachments"
           type="file"
           accept="application/pdf,image/*"
           multiple

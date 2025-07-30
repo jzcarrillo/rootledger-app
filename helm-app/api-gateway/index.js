@@ -76,37 +76,34 @@ app.post('/land/register', submitLimiter, upload.array('attachments', 5), async 
 
   try {
     const attachments = req.files || [];
-    const formFields = req.body;
 
-    const payload = {
-      owner_name: formFields.owner_name,
-      contact_no: formFields.contact_no,
-      address: formFields.address,
-      email_address: formFields.email_address,
-      title_number: formFields.title_number,
-      survey_number: formFields.survey_number,
-      property_location: formFields.property_location,
-      lot_number: Number(formFields.lot_number),
-      area_size: formFields.area_size ? Number(formFields.area_size) : null,
-      classification: formFields.classification,
-      registration_date: formFields.registration_date,
-      registrar_office: formFields.registrar_office,
-      previous_title_number: formFields.previous_title_number,
-      encumbrances: formFields.encumbrances,
-      status: formFields.status || "Pending",
-      attachments: attachments.map(file => ({
-        originalname: file.originalname,
-        mimetype: file.mimetype,
-        filename: file.originalname,
-        size: file.size,
-        buffer: file.buffer.toString('base64'),
-      })),
-    };
+    // ✅ Parse JSON string in 'payload' field
+    let formFields;
+    try {
+      formFields = JSON.parse(req.body.payload);
+    } catch (err) {
+      console.error('[❌ PAYLOAD PARSE ERROR]', err.message);
+      return res.status(400).json({ error: 'Malformed payload' });
+    }
 
-    const validatedPayload = landTitleSchema.parse(payload);
+    console.log('[DEBUG] Form fields:', formFields);
+    console.log('[DEBUG] Attachments:', attachments);
 
+    // ✅ Validate
+    const result = landTitleSchema.safeParse(formFields);
+    if (!result.success) {
+      console.error('[❌ ZOD VALIDATION ERROR]', result.error.format());
+      return res.status(400).json({
+        error: 'Invalid input',
+        details: result.error.errors,
+      });
+    }
+
+    console.log('[✅ ZOD VALIDATION SUCCESS]');
+
+    // ✅ Forward to producer (same logic here...)
     const formData = new FormData();
-    formData.append('payload', JSON.stringify(validatedPayload));
+    formData.append('payload', JSON.stringify(formFields));
 
     attachments.forEach((file, index) => {
       if (!file?.buffer) return;
@@ -119,7 +116,10 @@ app.post('/land/register', submitLimiter, upload.array('attachments', 5), async 
     const response = await axios.post(
       'http://lambda-producer:4000/register',
       formData,
-      { headers: formData.getHeaders(), timeout: 5000 }
+      {
+        headers: formData.getHeaders(),
+        timeout: 5000,
+      }
     );
 
     console.log(`[✅ SUCCESS] Forwarded to lambda-producer-service: ${response.status}`);
@@ -128,10 +128,7 @@ app.post('/land/register', submitLimiter, upload.array('attachments', 5), async 
   } catch (err) {
     if (err instanceof z.ZodError) {
       console.error(`[❌ ZOD VALIDATION ERROR]`, err.errors);
-      return res.status(400).json({
-        error: "Validation failed",
-        details: err.errors,
-      });
+      return res.status(400).json({ error: "Validation failed", details: err.errors });
     }
 
     console.error("❌ Unexpected error:", err.message || err);

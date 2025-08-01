@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.postgresUsers.fullnameOverride }}
+  labels:
+    app: {{ .Values.postgresUsers.fullnameOverride }}
+spec:
+  replicas: {{ .Values.postgresUsers.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.postgresUsers.fullnameOverride }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.postgresUsers.fullnameOverride }}
+    spec:
+      containers:
+        - name: {{ .Values.postgresUsers.fullnameOverride }}
+          image: "{{ .Values.postgresUsers.image.repository }}:{{ .Values.postgresUsers.image.tag }}"
+          imagePullPolicy: {{ .Values.postgresUsers.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.postgresUsers.containerPort }}
+          env:
+            - name: POSTGRES_USER
+              value: "{{ .Values.postgresUsers.auth.user }}"
+            - name: POSTGRES_PASSWORD
+              value: "{{ .Values.postgresUsers.auth.password }}"
+            - name: POSTGRES_DB
+              value: "{{ .Values.postgresUsers.auth.database }}"
+          args:
+{{ toYaml .Values.postgresUsers.args | indent 12 }}
+          volumeMounts:
+            - name: initdb
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: initdb
+          configMap:
+            name: {{ .Values.postgresUsers.fullnameOverride }}-init-scripts

@@ -326,3 +326,69 @@ grafana:
     refreshInterval: "10s"
     defaultTimezone: browser
     schemaVersion: 36
+
+backendUsers:
+  enabled: true
+  fullnameOverride: backend-users
+  replicaCount: 1
+
+  image:
+    repository: backend-users
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  containerPort: 3002
+
+  service:
+    type: ClusterIP
+    port: 3002
+    targetPort: 3002
+
+  env:
+    databaseUrl: postgres://myuser:mypass@postgres-users.helm-app.svc.cluster.local:5432/mydb
+
+  postgres:
+    host: postgres-users.helm-app.svc.cluster.local
+    port: 5432
+    wait:
+      enabled: true
+      interval: 2
+      timeout: 60
+
+postgresUsers:  
+  fullnameOverride: postgres-users
+  replicaCount: 1
+
+  image:
+    repository: postgres
+    tag: 15-alpine
+    pullPolicy: IfNotPresent
+
+  containerPort: 5432
+
+  service:
+    type: ClusterIP
+    port: 5432
+    targetPort: 5432
+
+  auth:
+    user: myuser
+    password: mypass
+    database: mydb
+
+  args:
+    - "-c"
+    - "log_statement=all"
+    - "-c"
+    - "log_duration=on"
+
+initdbScripts:
+  init.sql: |
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      full_name VARCHAR(100) NOT NULL,
+      email VARCHAR(100) UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      role VARCHAR(50) DEFAULT 'user',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );

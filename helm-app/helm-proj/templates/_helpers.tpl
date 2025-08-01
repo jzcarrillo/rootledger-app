@@ -180,3 +180,31 @@ Return the name of the Grafana datasource ConfigMap
 {{- define "grafana.datasource.ConfigMapName" -}}
 grafana-datasources
 {{- end }}
+
+{{/*
+Always return just "backend-users" as the name
+*/}}
+{{- define "backend-users.name" -}}
+backend-users
+{{- end }}
+
+{{/*
+Always return just "backend-users" as the fullname — no release name prefix
+*/}}
+{{- define "backend-users.fullname" -}}
+backend-users
+{{- end }}
+
+{{/*
+Return the name for postgres-users (override via Values if needed)
+*/}}
+{{- define "postgres-users.name" -}}
+{{- default "postgres-users" .Values.postgresUsers.nameOverride -}}
+{{- end }}
+
+{{/*
+Return the fullname for postgres-users (override via Values if needed)
+*/}}
+{{- define "postgres-users.fullname" -}}
+{{- default "postgres-users" .Values.postgresUsers.fullnameOverride -}}
+{{- end }}

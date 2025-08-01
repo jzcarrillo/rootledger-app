@@ -93,6 +93,13 @@ export default function LandTitleForm() {
         formData.append("attachments", file);
       });
 
+      await axios.post("http://localhost:4002/register", {
+      full_name: "Jayz Admin",
+      email: "jayz@example.com",
+      password: "securepass123",
+      role: "admin"
+      });
+
       const response = await axios.post(
         "http://localhost:30081/land/register",
         formData,

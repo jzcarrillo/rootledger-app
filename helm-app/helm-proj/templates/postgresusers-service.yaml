@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.postgresUsers.fullnameOverride | default "postgres-users" }}
+  labels:
+    app: {{ .Values.postgresUsers.fullnameOverride | default "postgres-users" }}
+spec:
+  type: {{ .Values.postgresUsers.service.type }}
+  selector:
+    app: {{ .Values.postgresUsers.fullnameOverride | default "postgres-users" }}
+  ports:
+    - port: {{ .Values.postgresUsers.service.port }}
+      targetPort: {{ .Values.postgresUsers.service.targetPort }}
+      protocol: TCP

@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "backend-users.fullname" . }}
+  labels:
+    app: {{ include "backend-users.name" . }}
+spec:
+  replicas: {{ .Values.backendUsers.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "backend-users.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "backend-users.name" . }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.backendUsers.image.repository }}:{{ .Values.backendUsers.image.tag }}"
+          imagePullPolicy: {{ .Values.backendUsers.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.backendUsers.containerPort }}
+          env:
+            - name: DATABASE_URL
+              value: "{{ .Values.backendUsers.env.databaseUrl }}"

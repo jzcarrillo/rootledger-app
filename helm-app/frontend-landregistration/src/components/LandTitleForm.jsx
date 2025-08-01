@@ -343,7 +343,7 @@ export default function LandTitleForm() {
 
 <Snackbar
   open={snackbarOpen}
-  autoHideDuration={2000}
+  autoHideDuration={3000}
   onClose={handleSnackbarClose}
   anchorOrigin={{ vertical: "top", horizontal: "center" }} // ⬆️ Top Center
   sx={{

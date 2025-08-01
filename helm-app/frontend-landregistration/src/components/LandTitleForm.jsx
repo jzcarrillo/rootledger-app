@@ -93,13 +93,6 @@ export default function LandTitleForm() {
         formData.append("attachments", file);
       });
 
-      await axios.post("http://localhost:4002/register", {
-      full_name: "Jayz Admin",
-      email: "jayz@example.com",
-      password: "securepass123",
-      role: "admin"
-      });
-
       const response = await axios.post(
         "http://localhost:30081/land/register",
         formData,
@@ -350,7 +343,7 @@ export default function LandTitleForm() {
 
 <Snackbar
   open={snackbarOpen}
-  autoHideDuration={3000}
+  autoHideDuration={1000}
   onClose={handleSnackbarClose}
   anchorOrigin={{ vertical: "top", horizontal: "center" }} // ⬆️ Top Center
   sx={{

@@ -33,7 +33,7 @@ Get-Process | Where-Object {
 }
 
 # List of ports to clean up
-$ports = @(3000, 4000, 4001, 5672, 6379, 8081, 15672, 9090, 9093, 3000)
+$ports = @(3000, 4000, 4001, 5672, 6379, 8081, 15672, 9090, 9093, 3000, 3002, 5432)
 
 foreach ($port in $ports) {
     Write-Host "Checking port $port..."
@@ -96,9 +96,11 @@ $services = @(
     "rabbitmq-landregistry",
     "consumer-landregistry",
     "backend-landregistry",
+    "backend-users"
     "frontend-landregistration"
     "redis",
     "postgres-landregistry",
+    "postgres-users"
     "prometheus",
     "alertmanager",
     "grafana"
@@ -138,7 +140,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-OK "Dry-run successful."
 
-# Step 4: Install everything EXCEPT backend
+# Step 4: Install everything EXCEPT backend-landregistry
 Write-Info "Installing non-backend components first..."
 
 helm upgrade --install $ReleaseName $ChartPath -n $Namespace `
@@ -152,8 +154,22 @@ if ($LASTEXITCODE -ne 0) {
 Write-OK "Initial Helm install successful (backend excluded)."
 Write-OK "Helm release '$ReleaseName' installed successfully."
 
+# Step 4.1: Install everything EXCEPT backend-users
+Write-Info "Installing non-backend components first..."
 
-# Step 4.1: Wait for Redis and PostgreSQL to be ready
+helm upgrade --install $ReleaseName $ChartPath -n $Namespace `
+  --set backendUsers.enabled=false `
+  --wait --debug
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Err "Initial Helm upgrade/install failed. Aborting."
+    exit 1
+}
+Write-OK "Initial Helm install successful (backend excluded)."
+Write-OK "Helm release '$ReleaseName' installed successfully."
+
+
+# Step 4.2: Wait for Redis and PostgreSQL to be ready
 Write-Info "`n[STEP 4.1] Waiting for Redis and PostgreSQL readiness..."
 
 # Redis readiness check
@@ -173,7 +189,7 @@ if (-not $redisReady) {
 }
 Write-OK "Redis is ready."
 
-# PostgreSQL readiness check
+# Postgres-Landregistry readiness check - 
 $pgPod = kubectl get pods -n helm-app -l app=postgres-landregistry -o jsonpath="{.items[0].metadata.name}"
 
 if (-not $pgPod) {
@@ -202,10 +218,51 @@ if (-not $pgReady) {
 
 Write-Host "PostgreSQL is ready."
 
-# Step 4.2: Deploy backend now that dependencies are ready
+# Postgres-users readiness check - 
+$pgPod = kubectl get pods -n helm-app -l app=postgres-users -o jsonpath="{.items[0].metadata.name}"
+
+if (-not $pgPod) {
+    Write-Err "PostgreSQL pod not found! Make sure label 'app=postgres-users' is correct."
+    kubectl get pods -n helm-app --show-labels
+    exit 1
+}
+
+$pgReady = $false
+for ($i = 1; $i -le 10; $i++) {
+    Write-Host "Checking PostgreSQL readiness... attempt $i/10"
+    $pgCheckCmd = "PGPASSWORD=mypass psql -U myuser -d mydb -c '\q'"
+    $output = kubectl exec -n helm-app $pgPod -- /bin/sh -c $pgCheckCmd
+
+    if ($LASTEXITCODE -eq 0) {
+        $pgReady = $true
+        break
+    }
+    Start-Sleep -Seconds 3
+}
+
+if (-not $pgReady) {
+    Write-Err "PostgreSQL not ready after retries. Aborting."
+    exit 1
+}
+
+Write-Host "PostgreSQL is ready."
+
+# Step 4.3: Deploy backend now that dependencies are ready
 Write-Info "`n[STEP 4.2] Deploying backend now that Redis and PostgreSQL are ready..."
 helm upgrade --install $ReleaseName $ChartPath -n $Namespace `
   --set backendLandRegistry.enabled=true `
+  --wait --debug
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Err "Backend install failed. Aborting."
+    exit 1
+}
+Write-OK "Backend deployed successfully after readiness check."
+
+# Step 4.4: Deploy backend now that dependencies are ready
+Write-Info "`nDeploying backend now that Redis and PostgreSQL are ready..."
+helm upgrade --install $ReleaseName $ChartPath -n $Namespace `
+  --set backendUsers.enabled=true `
   --wait --debug
 
 if ($LASTEXITCODE -ne 0) {
@@ -296,6 +353,11 @@ Write-Host "Port-forwarding postgres-landregistry on port 5432..."
 $portForwardAlertmanager = Start-Process -FilePath "kubectl" `
   -ArgumentList "port-forward", "svc/postgres-landregistry", "5432:5432", "-n", "helm-app" `
   -NoNewWindow -PassThru     
+
+Write-Host "Port-forwarding backend-users on port 3002..."
+$portForwardAlertmanager = Start-Process -FilePath "kubectl" `
+  -ArgumentList "port-forward", "svc/backend-users", "3002:3002", "-n", "helm-app" `
+  -NoNewWindow -PassThru       
 
 # Wait a moment to ensure port-forwards are established
 Start-Sleep -Seconds 3

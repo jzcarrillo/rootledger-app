@@ -11,23 +11,42 @@ app.use(express.json());
 
 // PostgreSQL Client
 const pgClient = new Client({
-  host: "postgres-users", // or use process.env.PGHOST
+  host: "postgres-users",
   port: 5432,
   user: "myuser",
   password: "mypass",
   database: "mydb",
 });
 
-pgClient.connect()
-  .then(() => console.log("Connected to PostgreSQL"))
-  .catch((err) => console.error("PostgreSQL connection error", err));
+// Connect and initialize the users table
+async function initDatabase() {
+  try {
+    await pgClient.connect();
+    console.log("Connected to PostgreSQL");
 
-// Register route
+    await pgClient.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        full_name VARCHAR(100) NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        role VARCHAR(50) DEFAULT 'user',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    console.log("Ensured users table exists");
+  } catch (err) {
+    console.error("PostgreSQL connection error", err);
+  }
+}
+
+initDatabase();
+
 app.post("/register", async (req, res) => {
   const { full_name, email, password, role } = req.body;
 
   try {
-    // Use pgClient for queries
     const existing = await pgClient.query("SELECT * FROM users WHERE email = $1", [email]);
     if (existing.rows.length > 0) {
       return res.status(400).json({ error: "Email already registered" });
@@ -42,7 +61,9 @@ app.post("/register", async (req, res) => {
       [full_name, email, hashedPassword, role || "user"]
     );
 
+    console.log("Inserted user:", result.rows[0]);
     res.status(201).json({ message: "User registered", user: result.rows[0] });
+
   } catch (err) {
     console.error("Register error:", err);
     res.status(500).json({ error: "Registration failed" });

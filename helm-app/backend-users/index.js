@@ -3,6 +3,7 @@ const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { Client } = require("pg");
+const authenticateToken = require("./middleware/auth");
 
 const app = express();
 const port = 3002;
@@ -113,6 +114,14 @@ app.post("/login", async (req, res) => {
     console.error("Login error:", err);
     res.status(500).json({ error: "Login failed" });
   }
+});
+
+// Example protected route
+app.get("/profile", authenticateToken, (req, res) => {
+  res.json({
+    message: "Access granted",
+    user: req.user, // This contains decoded token info: id, email, role, etc.
+  });
 });
 
 app.listen(port, () => {

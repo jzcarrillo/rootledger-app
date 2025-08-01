@@ -3,7 +3,6 @@ const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { Client } = require("pg");
-const authenticateToken = require("./middleware/auth");
 
 const app = express();
 const port = 3002;
@@ -11,19 +10,18 @@ const port = 3002;
 app.use(cors());
 app.use(express.json());
 
+const JWT_SECRET = "your_jwt_secret"; // 🔐 Move to .env in production
+
 // PostgreSQL Client
 const pgClient = new Client({
-  host: "postgres-users",
+  host: "postgres-users", 
   port: 5432,
   user: "myuser",
   password: "mypass",
   database: "mydb",
 });
 
-// Add this secret key (use env in real apps)
-const JWT_SECRET = "your_jwt_secret"; // TODO: move to process.env.JWT_SECRET
-
-// Connect and initialize the users table
+// Init DB
 async function initDatabase() {
   try {
     await pgClient.connect();
@@ -45,9 +43,10 @@ async function initDatabase() {
     console.error("PostgreSQL connection error", err);
   }
 }
-
 initDatabase();
 
+
+// ✅ REGISTER
 app.post("/register", async (req, res) => {
   const { full_name, email, password, role } = req.body;
 
@@ -66,7 +65,6 @@ app.post("/register", async (req, res) => {
       [full_name, email, hashedPassword, role || "user"]
     );
 
-    console.log("Inserted user:", result.rows[0]);
     res.status(201).json({ message: "User registered", user: result.rows[0] });
 
   } catch (err) {
@@ -75,6 +73,8 @@ app.post("/register", async (req, res) => {
   }
 });
 
+
+// ✅ LOGIN
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -92,16 +92,12 @@ app.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    // Create JWT token
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: "1h" }
-    );
+    const payload = { id: user.id, email: user.email, role: user.role };
+    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: "100m" });
 
     res.json({
       message: "Login successful",
-      token,
+      access_token: accessToken,
       user: {
         id: user.id,
         full_name: user.full_name,
@@ -114,14 +110,6 @@ app.post("/login", async (req, res) => {
     console.error("Login error:", err);
     res.status(500).json({ error: "Login failed" });
   }
-});
-
-// Example protected route
-app.get("/profile", authenticateToken, (req, res) => {
-  res.json({
-    message: "Access granted",
-    user: req.user, // This contains decoded token info: id, email, role, etc.
-  });
 });
 
 app.listen(port, () => {
